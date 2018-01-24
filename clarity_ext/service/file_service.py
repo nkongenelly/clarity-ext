@@ -282,30 +282,11 @@ class LocalSharedFileProvider:
         cache_directory = self.os_service.abspath(".cache")
         cache_path = os.path.join(cache_directory, local_file_name)
 
-        if self.should_cache and self.os_service.exists(cache_path):
-            self.logger.info("Fetching cached artifact from '{}'".format(cache_path))
-            self.os_service.copy(cache_path, ".")
-        else:
-            if not self.os_service.exists(local_file_name_abs_path):
+        if not (self.should_cache and self.os_service.exists(cache_path)):
+            self._download_or_create_local_file(artifact, local_file_name_abs_path, modify_attached)
 
-                if len(artifact.files) == 0:
-                    # No file has been uploaded yet, create empty file
-                    if modify_attached:
-                        with self.os_service.open_file(local_file_name_abs_path, "w+"):
-                            pass
-                else:
-                    file = artifact.api_resource.files[0]  # TODO: Hide this logic
-                    self.logger.info("Downloading file {} (artifact={} '{}')"
-                                     .format(file.id, artifact.id, artifact.name))
-                    self.file_repo.copy_remote_file(file.id, local_file_name_abs_path)
-                    self.logger.info("Download completed, path='{}'".format(os.path.relpath(local_file_name_abs_path)))
-
-                    if self.should_cache:
-                        if not self.os_service.exists(cache_directory):
-                            self.os_service.mkdir(cache_directory)
-                        self.logger.info("Copying artifact to cache directory, {}=>{}".format(
-                            local_file_name_abs_path, cache_directory))
-                        self.os_service.copy(local_file_name_abs_path, cache_directory)
+        if self.should_cache:
+            self._direct_to_cache(local_file_name_abs_path, cache_directory, cache_path)
 
         if modify_attached:
             # Move the file to the upload directory and refer to it by that path afterwards. This way the local shared
@@ -317,6 +298,35 @@ class LocalSharedFileProvider:
         f = self.file_repo.open_local_file(local_path, mode)
         self.file_service._local_shared_files.append(f)
         return f
+
+    def _download_or_create_local_file(self, artifact, local_file_name_abs_path, modify_attached):
+        if not self.os_service.exists(local_file_name_abs_path) and len(artifact.files) == 0 and modify_attached:
+            # No file has been uploaded yet
+            self._create_empty_file(local_file_name_abs_path)
+        elif not self.os_service.exists(local_file_name_abs_path) and len(artifact.files) > 0:
+            self._copy_remote_file(artifact, local_file_name_abs_path)
+
+    def _direct_to_cache(self, local_file_name_abs_path, cache_directory, cache_path):
+        if self.os_service.exists(cache_path):
+            self.logger.info("Fetching cached artifact from '{}'".format(cache_path))
+            self.os_service.copy(cache_path, ".")
+        elif self.os_service.exists(local_file_name_abs_path):
+            if not self.os_service.exists(cache_directory):
+                self.os_service.mkdir(cache_directory)
+            self.logger.info("Copying artifact to cache directory, {}=>{}".format(
+                local_file_name_abs_path, cache_directory))
+            self.os_service.copy(local_file_name_abs_path, cache_directory)
+
+    def _create_empty_file(self, local_file_name_abs_path):
+        with self.os_service.open_file(local_file_name_abs_path, "w+"):
+            pass
+
+    def _copy_remote_file(self, artifact, local_file_name_abs_path):
+        file = artifact.api_resource.files[0]  # TODO: Hide this logic
+        self.logger.info("Downloading file {} (artifact={} '{}')"
+                         .format(file.id, artifact.id, artifact.name))
+        self.file_repo.copy_remote_file(file.id, local_file_name_abs_path)
+        self.logger.info("Download completed, path='{}'".format(os.path.relpath(local_file_name_abs_path)))
 
     def _artifact_by_name(self, file_handle, filename=None, fallback_on_first_unassigned=False):
         shared_files = self.artifact_service.shared_files()
