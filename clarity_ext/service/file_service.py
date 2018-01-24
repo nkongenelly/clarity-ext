@@ -277,8 +277,8 @@ class LocalSharedFileProvider:
         that the LIMS will not upload them by accident
         """
         local_file_name = "{}_{}.{}".format(artifact.id, filename.replace(" ", "_"), extension)
-        directory = os.path.join(self.downloaded_path, local_file_name)
-        downloaded_path = self.os_service.abspath(directory)
+        local_file_name_rel_path = os.path.join(self.downloaded_path, local_file_name)
+        local_file_name_abs_path = self.os_service.abspath(local_file_name_rel_path)
         cache_directory = self.os_service.abspath(".cache")
         cache_path = os.path.join(cache_directory, local_file_name)
 
@@ -286,33 +286,33 @@ class LocalSharedFileProvider:
             self.logger.info("Fetching cached artifact from '{}'".format(cache_path))
             self.os_service.copy(cache_path, ".")
         else:
-            if not self.os_service.exists(downloaded_path):
+            if not self.os_service.exists(local_file_name_abs_path):
 
                 if len(artifact.files) == 0:
-                    # No file has been uploaded yet
+                    # No file has been uploaded yet, create empty file
                     if modify_attached:
-                        with self.os_service.open_file(downloaded_path, "w+") as fs:
+                        with self.os_service.open_file(local_file_name_abs_path, "w+"):
                             pass
                 else:
                     file = artifact.api_resource.files[0]  # TODO: Hide this logic
                     self.logger.info("Downloading file {} (artifact={} '{}')"
                                      .format(file.id, artifact.id, artifact.name))
-                    self.file_repo.copy_remote_file(file.id, downloaded_path)
-                    self.logger.info("Download completed, path='{}'".format(os.path.relpath(downloaded_path)))
+                    self.file_repo.copy_remote_file(file.id, local_file_name_abs_path)
+                    self.logger.info("Download completed, path='{}'".format(os.path.relpath(local_file_name_abs_path)))
 
                     if self.should_cache:
                         if not self.os_service.exists(cache_directory):
                             self.os_service.mkdir(cache_directory)
                         self.logger.info("Copying artifact to cache directory, {}=>{}".format(
-                            downloaded_path, cache_directory))
-                        self.os_service.copy(downloaded_path, cache_directory)
+                            local_file_name_abs_path, cache_directory))
+                        self.os_service.copy(local_file_name_abs_path, cache_directory)
 
         if modify_attached:
             # Move the file to the upload directory and refer to it by that path afterwards. This way the local shared
             # file can be modified by the caller.
-            local_path = self.file_service.queue(downloaded_path, artifact, FileService.FILE_PREFIX_NONE)
+            local_path = self.file_service.queue(local_file_name_abs_path, artifact, FileService.FILE_PREFIX_NONE)
         else:
-            local_path = downloaded_path
+            local_path = local_file_name_abs_path
 
         f = self.file_repo.open_local_file(local_path, mode)
         self.file_service._local_shared_files.append(f)
