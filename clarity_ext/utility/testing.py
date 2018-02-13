@@ -183,6 +183,7 @@ class TestExtensionContext(object):
         self.context = ExtensionContext.create_mocked(session, step_repo, os_service, file_repository, clarity_service)
         # TODO: only mocking this one method of the validation_service for now (quick fix)
         self.context.validation_service.handle_single_validation = MagicMock()
+        self.context.logger = MagicMock()
 
         self._shared_files = list()
         self._analytes = list()
