@@ -73,18 +73,18 @@ class FileService:
 
     def local_shared_file(self, file_handle, mode='r', extension="", modify_attached=False, file_name_contains=None):
         return self.local_shared_file_provider.\
-            local_shared_file_search_existing(file_handle, mode=mode,
-                                              extension=extension,
-                                              modify_attached=modify_attached,
-                                              file_name_contains=file_name_contains)
+            search_existing(file_handle, mode=mode,
+                            extension=extension,
+                            modify_attached=modify_attached,
+                            file_name_contains=file_name_contains)
 
     def local_shared_file_search_or_create(self, file_handle, mode='r', extension="",
                                            modify_attached=False, filename=None):
         return self.local_shared_file_provider.\
-            local_shared_file_search_or_create(file_handle, mode=mode,
-                                               extension=extension,
-                                               modify_attached=modify_attached,
-                                               filename=filename)
+            search_or_create(file_handle, mode=mode,
+                             extension=extension,
+                             modify_attached=modify_attached,
+                             filename=filename)
 
     def queue(self, downloaded_path, artifact, file_prefix):
         file_name = os.path.basename(downloaded_path)
@@ -251,13 +251,13 @@ class LocalSharedFileProvider:
         self.should_cache = should_cache
         self.logger = logger
 
-    def local_shared_file_search_existing(self, file_handle, mode='r', extension="", modify_attached=False, file_name_contains=None):
+    def search_existing(self, file_handle, mode='r', extension="", modify_attached=False, file_name_contains=None):
         artifact = self._artifact_by_name(file_handle, file_name_contains)
         return self._local_shared_file(artifact, file_handle, mode=mode, extension=extension,
                                        modify_attached=modify_attached)
 
-    def local_shared_file_search_or_create(self, file_handle, mode='ab', extension="",
-                                           modify_attached=False, filename=None):
+    def search_or_create(self, file_handle, mode='ab', extension="",
+                         modify_attached=False, filename=None):
         if filename is None:
             filename = file_handle
 
@@ -317,8 +317,8 @@ class LocalSharedFileProvider:
                 local_file_name_abs_path, cache_directory))
             self.os_service.copy(local_file_name_abs_path, cache_directory)
 
-    def _create_empty_file(self, local_file_name_abs_path):
-        with self.os_service.open_file(local_file_name_abs_path, "w+"):
+    def _create_empty_file(self, file_path):
+        with self.os_service.open_file(file_path, "w+"):
             pass
 
     def _copy_remote_file(self, artifact, local_file_name_abs_path):
