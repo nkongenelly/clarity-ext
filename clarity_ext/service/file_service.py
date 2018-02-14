@@ -88,6 +88,7 @@ class FileService:
 
     def queue(self, downloaded_path, artifact, file_prefix):
         file_name = os.path.basename(downloaded_path)
+        self.artifactid_by_filename[file_name] = artifact.id
         if file_prefix == FileService.FILE_PREFIX_ARTIFACT_ID and not file_name.startswith(artifact.id):
             file_name = "{}_{}".format(artifact.id, file_name)
         elif file_prefix == FileService.FILE_PREFIX_NONE:
@@ -191,7 +192,6 @@ class FileService:
 
     def _upload_single(self, artifact, file_handle, instance_name, content, file_prefix):
         """Queues the file for update. Call commit to send to the server."""
-        self.artifactid_by_filename[instance_name] = artifact.id
         local_path = self.save_locally(content, instance_name)
         self.logger.info("Queuing file '{}' for upload to the server, file handle '{}'".format(local_path, file_handle))
         self.queue(local_path, artifact, file_prefix)
@@ -350,7 +350,7 @@ class LocalSharedFileProvider:
         # No match, take the first artifact with no files yet associated
         if fallback_on_first_unassigned and len(filtered_artifacts) == 0:
             for a in by_handle:
-                if len(a.files) == 0:
+                if len(a.files) == 0 and a.id not in self.file_service.artifactid_by_filename.itervalues():
                     filtered_artifacts = [a]
                     break
         elif not fallback_on_first_unassigned and len(filtered_artifacts) == 0:
