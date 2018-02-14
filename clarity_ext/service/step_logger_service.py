@@ -10,10 +10,14 @@ class StepLoggerService:
     Provides support for logging to shared files in a step.
     """
 
-    def __init__(self, step_logger_name, file_service, raise_if_not_found=False, append=True, extension="log",
-                 write_to_stdout=True):
+    def __init__(self, file_handle, file_service, raise_if_not_found=False, append=True, extension="txt",
+                 write_to_stdout=True, filename=None):
         self.core_logger = logging.getLogger(__name__)
-        self.step_logger_name = step_logger_name
+        self.file_handle = file_handle
+        if filename is None:
+            self.filename = file_handle.replace(' ', '_')
+        else:
+            self.filename = filename
         self.file_service = file_service
         self.raise_if_not_found = raise_if_not_found
         self.append = append
@@ -28,8 +32,11 @@ class StepLoggerService:
     def step_log(self):
         try:
             mode = "ab" if self.append else "wb"
-            return self.file_service.local_shared_file(self.step_logger_name, extension=self.extension,
-                                                       mode=mode, modify_attached=True)
+            return self.file_service.local_shared_file_search_or_create(self.file_handle,
+                                                                        extension=self.extension,
+                                                                        mode=mode,
+                                                                        modify_attached=True,
+                                                                        filename=self.filename)
         except SharedFileNotFound:
             if self.raise_if_not_found:
                 raise
