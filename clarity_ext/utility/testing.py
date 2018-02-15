@@ -204,6 +204,7 @@ class TestExtensionContext(object):
     def add_shared_result_file(self, f):
         assert f.name is not None, "You need to supply a name"
         f.id = "92-{}".format(len(self._shared_files))
+        f.api_resource = MagicMock()
         self._shared_files.append((None, f))
 
     def add_udf_to_step(self, key, value):

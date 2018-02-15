@@ -107,23 +107,18 @@ class FileService:
         self.os_service.copy_file(downloaded_path, upload_path)
         return upload_path
 
-    def remove_files(self, file_handle, disabled):
+    def remove_files(self, file_handle, disabled, exclude_list=None):
         """Removes all files for the particular file handle.
 
         Note: The files are not actually removed from the server, only the link to the step.
         """
         artifacts = sorted([shared_file for shared_file in self.artifact_service.shared_files()
                             if shared_file.name == file_handle], key=lambda f: f.id)
+        if exclude_list is not None:
+            artifacts = [a for a in artifacts for exclude_name in exclude_list
+                         if len(a.files) > 0 and exclude_name not in a.files[0].original_location]
         for artifact in artifacts:
-            for f in artifact.files:
-                if disabled:
-                    self.logger.info("Removing (disabled) file: {}".format(f.uri))
-                    continue
-                # TODO: Add to another service
-                r = requests.delete(f.uri, auth=(self.session.api.username, self.session.api.password))
-                if r.status_code != 204:
-                    raise RemoveFileException("Can't remove file with id {}. Status code was {}".format(
-                        f.id, r.status_code))
+            artifact.remove_files(disabled, self.logger, self.session)
 
     def upload_files(self, file_handle, files, stdout_max_lines=50, zip_files=False):
         """
