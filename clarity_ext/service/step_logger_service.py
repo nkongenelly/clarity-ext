@@ -81,3 +81,35 @@ class StepLoggerService:
         # This factory method is added for readability in the extensions.
         return StepLoggerService(name, self.file_service, raise_if_not_found=True, append=False)
 
+
+class AggregatedStepLoggerService:
+    """
+    Contains a list of step logger services, and have the same interface as
+    StepLoggerService.
+    Errors and warnings are written to step logs dedicated to the respective type
+    """
+    def __init__(self, default_step_logger_service, warnings_step_logger_service=None,
+                 errors_step_logger_service=None):
+        self.default_step_logger_service = default_step_logger_service
+        self.warnings_step_logger_service = warnings_step_logger_service
+        self.errors_step_logger_service = errors_step_logger_service
+
+    def error(self, msg):
+        self.default_step_logger_service.error(msg)
+        if self.errors_step_logger_service is not None:
+            self.errors_step_logger_service.error(msg)
+
+    def warning(self, msg):
+        self.default_step_logger_service.warning(msg)
+        if self.warnings_step_logger_service is not None:
+            self.warnings_step_logger_service.warning(msg)
+
+    def info(self, msg):
+        self.default_step_logger_service.info(msg)
+
+    def log(self, msg):
+        self.default_step_logger_service.log(msg)
+
+    def get(self, name):
+        # This factory method is added for readability in the extensions.
+        return StepLoggerService(name, self.default_step_logger_service.file_service, raise_if_not_found=True, append=False)
