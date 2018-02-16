@@ -1,7 +1,6 @@
 from __future__ import print_function
 import re
 import os
-import sys
 import shutil
 import logging
 from zipfile import ZipFile
@@ -47,6 +46,10 @@ class FileService:
         self.disable_commits = disable_commits
         self.uploaded_to_stdout = uploaded_to_stdout
 
+        self.local_shared_file_provider = LocalSharedFileProvider(
+            self, self.file_repo, self.artifact_service, self.downloaded_path,
+            self.os_service, self.should_cache, self.logger)
+
         # Remove all files before starting
         if self.os_service.exists(self.CONTEXT_FILES_ROOT):
             self.os_service.rmtree(self.CONTEXT_FILES_ROOT)
@@ -69,61 +72,21 @@ class FileService:
             return Csv(f)
 
     def local_shared_file(self, file_handle, mode='r', extension="", modify_attached=False, file_name_contains=None):
-        """
-        Downloads the local shared file and returns an open file-like object.
+        return self.local_shared_file_provider.\
+            search_existing(file_handle, mode=mode,
+                            extension=extension,
+                            modify_attached=modify_attached,
+                            file_name_contains=file_name_contains)
 
-        If the file already exists, it will not be downloaded again.
+    def local_shared_file_search_or_create(self, file_handle, mode='r', extension="",
+                                           modify_attached=False, filename=None):
+        return self.local_shared_file_provider.\
+            search_or_create(file_handle, mode=mode,
+                             extension=extension,
+                             modify_attached=modify_attached,
+                             filename=filename)
 
-        Details:
-        The downloaded files will be removed when the context is cleaned up. This ensures
-        that the LIMS will not upload them by accident
-        """
-
-        artifact = self._artifact_by_name(file_handle, file_name_contains)
-        local_file_name = "{}_{}.{}".format(artifact.id, file_handle.replace(" ", "_"), extension)
-        directory = os.path.join(self.downloaded_path, local_file_name)
-        downloaded_path = os.path.abspath(directory)
-        cache_directory = os.path.abspath(".cache")
-        cache_path = os.path.join(cache_directory, local_file_name)
-
-        if self.should_cache and os.path.exists(cache_path):
-            self.logger.info("Fetching cached artifact from '{}'".format(cache_path))
-            # TODO: Mockable, file system repo
-            shutil.copy(cache_path, ".")
-        else:
-            if not os.path.exists(downloaded_path):
-
-                if len(artifact.files) == 0:
-                    # No file has been uploaded yet
-                    if modify_attached:
-                        with self.os_service.open_file(downloaded_path, "w+") as fs:
-                            pass
-                else:
-                    file = artifact.api_resource.files[0]  # TODO: Hide this logic
-                    self.logger.info("Downloading file {} (artifact={} '{}')"
-                                     .format(file.id, artifact.id, artifact.name))
-                    self.file_repo.copy_remote_file(file.id, downloaded_path)
-                    self.logger.info("Download completed, path='{}'".format(os.path.relpath(downloaded_path)))
-
-                    if self.should_cache:
-                        if not os.path.exists(cache_directory):
-                            os.mkdir(cache_directory)
-                        self.logger.info("Copying artifact to cache directory, {}=>{}".format(
-                            downloaded_path, cache_directory))
-                        shutil.copy(downloaded_path, cache_directory)
-
-        if modify_attached:
-            # Move the file to the upload directory and refer to it by that path afterwards. This way the local shared
-            # file can be modified by the caller.
-            local_path = self._queue(downloaded_path, artifact, FileService.FILE_PREFIX_NONE)
-        else:
-            local_path = downloaded_path
-
-        f = self.file_repo.open_local_file(local_path, mode)
-        self._local_shared_files.append(f)
-        return f
-
-    def _queue(self, downloaded_path, artifact, file_prefix):
+    def queue(self, downloaded_path, artifact, file_prefix):
         file_name = os.path.basename(downloaded_path)
         if file_prefix == FileService.FILE_PREFIX_ARTIFACT_ID and not file_name.startswith(artifact.id):
             file_name = "{}_{}".format(artifact.id, file_name)
@@ -142,22 +105,6 @@ class FileService:
         upload_path = os.path.join(upload_dir, file_name)
         self.os_service.copy_file(downloaded_path, upload_path)
         return upload_path
-
-    def _artifact_by_name(self, file_handle, file_name_contains=None):
-        shared_files = self.artifact_service.shared_files()
-        by_handle = [shared_file for shared_file in shared_files
-                     if shared_file.name == file_handle]
-
-        # Further filter
-        if file_name_contains is not None:
-            by_handle = [a for a in by_handle if file_name_contains in a.files[0].original_location]
-
-        if len(by_handle) != 1:
-            files = ", ".join(map(lambda x: x.name, shared_files))
-            raise SharedFileNotFound("Expected a shared file called '{}', got {}.\nFile: '{}'\nFiles: {}".format(
-                file_handle, len(by_handle), file_handle, files))
-        artifact = by_handle[0]
-        return artifact
 
     def remove_files(self, file_handle, disabled):
         """Removes all files for the particular file handle.
@@ -200,8 +147,8 @@ class FileService:
 
             zip_file_name = "sample_sheet.zip"
             self.compress_files(zip_file_name, files)
-            self._queue(os.path.join(self.temp_path, zip_file_name), artifact,
-                        FileService.FILE_PREFIX_ARTIFACT_ID)
+            self.queue(os.path.join(self.temp_path, zip_file_name), artifact,
+                       FileService.FILE_PREFIX_ARTIFACT_ID)
         else:
             if len(files) > len(artifacts):
                 raise SharedFileNotFound("Trying to upload {} files to '{}', but only {} are supported".format(
@@ -247,7 +194,7 @@ class FileService:
         self.artifactid_by_filename[instance_name] = artifact.id
         local_path = self.save_locally(content, instance_name)
         self.logger.info("Queuing file '{}' for upload to the server, file handle '{}'".format(local_path, file_handle))
-        self._queue(local_path, artifact, file_prefix)
+        self.queue(local_path, artifact, file_prefix)
 
     def close_local_shared_files(self):
         for f in self._local_shared_files:
@@ -292,6 +239,124 @@ class FileService:
             else:
                 raise NotImplementedError("Type not supported")
         return full_path
+
+
+class LocalSharedFileProvider:
+    def __init__(self, file_service, file_repo, artifact_service, downloaded_path, os_service, should_cache, logger):
+        self.file_service = file_service
+        self.file_repo = file_repo
+        self.artifact_service = artifact_service
+        self.downloaded_path = downloaded_path
+        self.os_service = os_service
+        self.should_cache = should_cache
+        self.logger = logger
+
+    def search_existing(self, file_handle, mode='r', extension="", modify_attached=False, file_name_contains=None):
+        artifact = self._artifact_by_name(file_handle, file_name_contains)
+        return self._local_shared_file(artifact, file_handle, mode=mode, extension=extension,
+                                       modify_attached=modify_attached)
+
+    def search_or_create(self, file_handle, mode='ab', extension="",
+                         modify_attached=False, filename=None):
+        if filename is None:
+            filename = file_handle
+
+        artifact = self._artifact_by_name(file_handle, filename, fallback_on_first_unassigned=True)
+        return self._local_shared_file(artifact, filename, mode=mode, extension=extension,
+                                       modify_attached=modify_attached)
+
+    def _local_shared_file(self, artifact, filename, mode='r', extension="",
+                           modify_attached=False):
+        """
+        Downloads the local shared file and returns an open file-like object.
+
+        If the file already exists, it will not be downloaded again.
+
+        Details:
+        The downloaded files will be removed when the context is cleaned up. This ensures
+        that the LIMS will not upload them by accident
+        """
+        local_file_name = "{}_{}.{}".format(artifact.id, filename.replace(" ", "_"), extension)
+        local_file_name_rel_path = os.path.join(self.downloaded_path, local_file_name)
+        local_file_name_abs_path = self.os_service.abspath(local_file_name_rel_path)
+        cache_directory = self.os_service.abspath(".cache")
+        cache_path = os.path.join(cache_directory, local_file_name)
+
+        if self.should_cache and self.os_service.exists(cache_path):
+            self._use_cache(cache_path)
+        else:
+            self._download_or_create_local_file(artifact, local_file_name_abs_path, modify_attached)
+
+        if self.should_cache:
+            self._save_cache_for_next_time(local_file_name_abs_path, cache_directory)
+
+        if modify_attached:
+            # Move the file to the upload directory and refer to it by that path afterwards. This way the local shared
+            # file can be modified by the caller.
+            local_path = self.file_service.queue(local_file_name_abs_path, artifact, FileService.FILE_PREFIX_NONE)
+        else:
+            local_path = local_file_name_abs_path
+
+        f = self.file_repo.open_local_file(local_path, mode)
+        self.file_service._local_shared_files.append(f)
+        return f
+
+    def _download_or_create_local_file(self, artifact, local_file_name_abs_path, modify_attached):
+        if not self.os_service.exists(local_file_name_abs_path) and len(artifact.files) == 0 and modify_attached:
+            # No file has been uploaded yet
+            self._create_empty_file(local_file_name_abs_path)
+        elif not self.os_service.exists(local_file_name_abs_path) and len(artifact.files) > 0:
+            self._copy_remote_file(artifact, local_file_name_abs_path)
+
+    def _use_cache(self, cache_path):
+        self.logger.info("Fetching cached artifact from '{}'".format(cache_path))
+        self.os_service.copy(cache_path, ".")
+
+    def _save_cache_for_next_time(self, local_file_name_abs_path, cache_directory):
+        if self.os_service.exists(local_file_name_abs_path):
+            if not self.os_service.exists(cache_directory):
+                self.os_service.mkdir(cache_directory)
+            self.logger.info("Copying artifact to cache directory, {}=>{}".format(
+                local_file_name_abs_path, cache_directory))
+            self.os_service.copy(local_file_name_abs_path, cache_directory)
+
+    def _create_empty_file(self, file_path):
+        with self.os_service.open_file(file_path, "w+"):
+            pass
+
+    def _copy_remote_file(self, artifact, local_file_name_abs_path):
+        file = artifact.api_resource.files[0]  # TODO: Hide this logic
+        self.logger.info("Downloading file {} (artifact={} '{}')"
+                         .format(file.id, artifact.id, artifact.name))
+        self.file_repo.copy_remote_file(file.id, local_file_name_abs_path)
+        self.logger.info("Download completed, path='{}'".format(os.path.relpath(local_file_name_abs_path)))
+
+    def _artifact_by_name(self, file_handle, filename=None, fallback_on_first_unassigned=False):
+        shared_files = self.artifact_service.shared_files()
+        by_handle = [shared_file for shared_file in shared_files
+                     if shared_file.name == file_handle]
+
+        # Search for a match from already existing files
+        filtered_artifacts = list()
+        if filename is not None:
+            filtered_artifacts = [a for a in by_handle if len(a.files) > 0 and filename in a.files[0].original_location]
+
+        # No match, take the first artifact with no files yet associated
+        if fallback_on_first_unassigned and len(filtered_artifacts) == 0:
+            for a in by_handle:
+                if len(a.files) == 0:
+                    filtered_artifacts = [a]
+                    break
+        elif not fallback_on_first_unassigned and len(filtered_artifacts) == 0:
+            filtered_artifacts = by_handle
+
+        if len(filtered_artifacts) != 1:
+            files = ", ".join(map(lambda x: x.name, shared_files))
+            searched_filename = filename if filename is not None else file_handle
+            raise SharedFileNotFound("Expected a shared file called '{}', got {}.\nFile handle: '{}'\nFiles: {}".format(
+                searched_filename, len(filtered_artifacts), file_handle, files))
+        artifact = filtered_artifacts[0]
+        return artifact
 
 
 class SharedFileNotFound(Exception):
@@ -402,6 +467,9 @@ class OSService(object):
     def copy_file(self, source, dest):
         shutil.copyfile(source, dest)
 
+    def copy(self, src, dst):
+        shutil.copy(src, dst)
+
     def listdir(self, path):
         return os.listdir(path)
 
@@ -412,6 +480,9 @@ class OSService(object):
         location = os.path.join(os.getcwd(), new_name)
         shutil.copy(local_file, location)
         return location
+
+    def abspath(self, path):
+        return os.path.abspath(path)
 
 
 class RemoveFileException(Exception):
