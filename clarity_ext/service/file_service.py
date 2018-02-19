@@ -334,8 +334,9 @@ class LocalSharedFileProvider:
 
     def _artifact_by_name(self, file_handle, filename=None, fallback_on_first_unassigned=False):
         shared_files = self.artifact_service.shared_files()
-        by_handle = [shared_file for shared_file in shared_files
-                     if shared_file.name == file_handle]
+        by_handle = sorted([shared_file for shared_file in shared_files
+                            if shared_file.name == file_handle],
+                           key=lambda f: int(f.id.replace('92-', '')))
 
         # Search for a match from already existing files
         filtered_artifacts = list()
