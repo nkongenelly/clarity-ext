@@ -88,6 +88,7 @@ class FileService:
 
     def queue(self, downloaded_path, artifact, file_prefix):
         file_name = os.path.basename(downloaded_path)
+        self.artifactid_by_filename[file_name] = artifact.id
         if file_prefix == FileService.FILE_PREFIX_ARTIFACT_ID and not file_name.startswith(artifact.id):
             file_name = "{}_{}".format(artifact.id, file_name)
         elif file_prefix == FileService.FILE_PREFIX_NONE:
@@ -106,23 +107,18 @@ class FileService:
         self.os_service.copy_file(downloaded_path, upload_path)
         return upload_path
 
-    def remove_files(self, file_handle, disabled):
+    def remove_files(self, file_handle, disabled, exclude_list=None):
         """Removes all files for the particular file handle.
 
         Note: The files are not actually removed from the server, only the link to the step.
         """
         artifacts = sorted([shared_file for shared_file in self.artifact_service.shared_files()
                             if shared_file.name == file_handle], key=lambda f: f.id)
+        if exclude_list is not None:
+            artifacts = [a for a in artifacts for exclude_name in exclude_list
+                         if len(a.files) > 0 and exclude_name not in a.files[0].original_location]
         for artifact in artifacts:
-            for f in artifact.files:
-                if disabled:
-                    self.logger.info("Removing (disabled) file: {}".format(f.uri))
-                    continue
-                # TODO: Add to another service
-                r = requests.delete(f.uri, auth=(self.session.api.username, self.session.api.password))
-                if r.status_code != 204:
-                    raise RemoveFileException("Can't remove file with id {}. Status code was {}".format(
-                        f.id, r.status_code))
+            artifact.remove_files(disabled, self.logger, self.session)
 
     def upload_files(self, file_handle, files, stdout_max_lines=50, zip_files=False):
         """
@@ -191,7 +187,6 @@ class FileService:
 
     def _upload_single(self, artifact, file_handle, instance_name, content, file_prefix):
         """Queues the file for update. Call commit to send to the server."""
-        self.artifactid_by_filename[instance_name] = artifact.id
         local_path = self.save_locally(content, instance_name)
         self.logger.info("Queuing file '{}' for upload to the server, file handle '{}'".format(local_path, file_handle))
         self.queue(local_path, artifact, file_prefix)
@@ -339,8 +334,9 @@ class LocalSharedFileProvider:
 
     def _artifact_by_name(self, file_handle, filename=None, fallback_on_first_unassigned=False):
         shared_files = self.artifact_service.shared_files()
-        by_handle = [shared_file for shared_file in shared_files
-                     if shared_file.name == file_handle]
+        by_handle = sorted([shared_file for shared_file in shared_files
+                            if shared_file.name == file_handle],
+                           key=lambda f: int(f.id.replace('92-', '')))
 
         # Search for a match from already existing files
         filtered_artifacts = list()
@@ -350,7 +346,7 @@ class LocalSharedFileProvider:
         # No match, take the first artifact with no files yet associated
         if fallback_on_first_unassigned and len(filtered_artifacts) == 0:
             for a in by_handle:
-                if len(a.files) == 0:
+                if len(a.files) == 0 and a.id not in self.file_service.artifactid_by_filename.itervalues():
                     filtered_artifacts = [a]
                     break
         elif not fallback_on_first_unassigned and len(filtered_artifacts) == 0:

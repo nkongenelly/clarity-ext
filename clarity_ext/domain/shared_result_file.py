@@ -1,6 +1,7 @@
 from clarity_ext.domain.artifact import Artifact
 from clarity_ext.domain.udf import UdfMapping
 from clarity_ext import utils
+import requests
 
 
 class SharedResultFile(Artifact):
@@ -13,6 +14,21 @@ class SharedResultFile(Artifact):
         # TODO: These files are currently represented with api resources, not internal
         # domain objects
         self.files = files or list()
+
+    def remove_files(self, disabled, logger, session):
+        self._unlink_files_from_artifact(disabled, logger, session)
+        self.files = list()
+
+    def _unlink_files_from_artifact(self, disabled, logger, session):
+        for f in self.files:
+            if disabled:
+                logger.info("Removing (disabled) file: {}".format(f.uri))
+                return
+            # TODO: Add to another service
+            r = requests.delete(f.uri, auth=(session.api.username, session.api.password))
+            if r.status_code != 204:
+                raise RemoveFileException("Can't remove file with id {}. Status code was {}".format(
+                    f.id, r.status_code))
 
     @staticmethod
     def create_from_rest_resource(resource, process_type=None):
@@ -29,3 +45,7 @@ class SharedResultFile(Artifact):
     def __repr__(self):
         typename = type(self).__name__
         return "{}<{} ({})>".format(typename, self.name, self.id)
+
+
+class RemoveFileException(Exception):
+    pass

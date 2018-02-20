@@ -10,10 +10,14 @@ class StepLoggerService:
     Provides support for logging to shared files in a step.
     """
 
-    def __init__(self, step_logger_name, file_service, raise_if_not_found=False, append=True, extension="log",
-                 write_to_stdout=True):
+    def __init__(self, file_handle, file_service, raise_if_not_found=False, append=True, extension="txt",
+                 write_to_stdout=True, filename=None):
         self.core_logger = logging.getLogger(__name__)
-        self.step_logger_name = step_logger_name
+        self.file_handle = file_handle
+        if filename is None:
+            self.filename = file_handle.replace(' ', '_')
+        else:
+            self.filename = filename
         self.file_service = file_service
         self.raise_if_not_found = raise_if_not_found
         self.append = append
@@ -28,8 +32,11 @@ class StepLoggerService:
     def step_log(self):
         try:
             mode = "ab" if self.append else "wb"
-            return self.file_service.local_shared_file(self.step_logger_name, extension=self.extension,
-                                                       mode=mode, modify_attached=True)
+            return self.file_service.local_shared_file_search_or_create(self.file_handle,
+                                                                        extension=self.extension,
+                                                                        mode=mode,
+                                                                        modify_attached=True,
+                                                                        filename=self.filename)
         except SharedFileNotFound:
             if self.raise_if_not_found:
                 raise
@@ -74,3 +81,35 @@ class StepLoggerService:
         # This factory method is added for readability in the extensions.
         return StepLoggerService(name, self.file_service, raise_if_not_found=True, append=False)
 
+
+class AggregatedStepLoggerService:
+    """
+    Contains a list of step logger services, and have the same interface as
+    StepLoggerService.
+    Errors and warnings are written to step logs dedicated to the respective type
+    """
+    def __init__(self, default_step_logger_service, warnings_step_logger_service=None,
+                 errors_step_logger_service=None):
+        self.default_step_logger_service = default_step_logger_service
+        self.warnings_step_logger_service = warnings_step_logger_service
+        self.errors_step_logger_service = errors_step_logger_service
+
+    def error(self, msg):
+        self.default_step_logger_service.error(msg)
+        if self.errors_step_logger_service is not None:
+            self.errors_step_logger_service.error(msg)
+
+    def warning(self, msg):
+        self.default_step_logger_service.warning(msg)
+        if self.warnings_step_logger_service is not None:
+            self.warnings_step_logger_service.warning(msg)
+
+    def info(self, msg):
+        self.default_step_logger_service.info(msg)
+
+    def log(self, msg):
+        self.default_step_logger_service.log(msg)
+
+    def get(self, name):
+        # This factory method is added for readability in the extensions.
+        return StepLoggerService(name, self.default_step_logger_service.file_service, raise_if_not_found=True, append=False)
