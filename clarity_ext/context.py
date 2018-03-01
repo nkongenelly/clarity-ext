@@ -126,8 +126,8 @@ class ExtensionContext(object):
         Returns a file on the current step that can be used for marking the step as having an error
         without having a visible UDF on the step.
         """
-        file_list = [file for file in self.shared_files if file.name ==
-                     self.step_log_name]
+        file_list = [file for file in self.shared_files if self.step_log_name.lower() in file.file_name.lower()]
+
         if not len(file_list) == 1:
             raise ValueError("This step is not configured with the shared file entry for {}".format(
                 self.step_log_name))
@@ -135,7 +135,7 @@ class ExtensionContext(object):
 
     @property
     def step_log_name(self):
-        return self.validation_service.step_logger_service.step_logger_name
+        return self.validation_service.step_logger_service.step_logger_name.replace(' ', '_')
 
     @property
     def shared_files(self):

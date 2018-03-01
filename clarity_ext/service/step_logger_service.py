@@ -91,6 +91,7 @@ class AggregatedStepLoggerService:
     def __init__(self, default_step_logger_service, warnings_step_logger_service=None,
                  errors_step_logger_service=None):
         self.default_step_logger_service = default_step_logger_service
+        self.step_logger_name = default_step_logger_service.file_handle
         self.warnings_step_logger_service = warnings_step_logger_service
         self.errors_step_logger_service = errors_step_logger_service
 
