@@ -19,6 +19,13 @@ class SharedResultFile(Artifact):
         self._unlink_files_from_artifact(disabled, logger, session)
         self.files = list()
 
+    @property
+    def file_name(self):
+        if len(self.files) > 0:
+            return self.files[0].original_location
+        else:
+            return ''
+
     def _unlink_files_from_artifact(self, disabled, logger, session):
         for f in self.files:
             if disabled:
