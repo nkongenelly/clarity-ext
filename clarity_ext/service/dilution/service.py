@@ -623,13 +623,12 @@ class TransferValidationException(ValidationException):
         self.transfer = transfer
 
     def __repr__(self):
-        return "{}: {} Transfer for {} ({}@{} => {}@{}) - {}".format(
+        return "{}: {}, {} ({}@{} => {}@{})".format(
             self._repr_type(),
-            self.transfer.transfer_batch.name if self.transfer.transfer_batch else "",
+            self.msg,
             self.transfer.source_location.artifact.name,
             self.transfer.source_location.position, self.transfer.source_location.container.name,
-            self.transfer.target_location.position, self.transfer.target_location.container.name,
-            self.msg)
+            self.transfer.target_location.position, self.transfer.target_location.container.name)
 
 
 class TransferBatch(object):

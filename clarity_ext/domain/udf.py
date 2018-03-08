@@ -148,6 +148,9 @@ class UdfMapping(object):
     def __setitem__(self, key, value):
         self.unwrap(key).value = value
 
+    def udf_name_in_lims_ui(self, py_udf):
+        return self.raw_map[py_udf][0].key
+
     def unwrap(self, key):
         """
         First tries to fetch by the original key, raises an exception if there
