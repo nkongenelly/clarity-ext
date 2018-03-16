@@ -3,8 +3,6 @@
 [![Build Status](https://travis-ci.org/Molmed/clarity-ext.svg?branch=develop)](https://travis-ci.org/Molmed/clarity-ext)
 [![Code Climate](https://codeclimate.com/github/Molmed/clarity-ext/badges/gpa.svg)](https://codeclimate.com/github/Molmed/clarity-ext)
 
-NOTE: Work in progress (pre-alpha). This document is also in pre-alpha.
-
 Provides a library for extending Clarity LIMS in a more developer-friendly way.
 
 ## Problem 
@@ -23,9 +21,6 @@ This method is cumbersome and doesn't provide an acceptable feedback loop for th
 With `clarity-ext`, the developer can instead:
   * Set a step up as usual
   * Write an extension that should run in this step
-  * Run (integration test) the extension from his development environment
-  * All requests/responses are cached, so the integration test will run fast. Furthermore, the test
-    can still be executed after the step has been deleted or altered. 
   * Extensions have access to extension contexts, which do most of the work. This way, the readability 
     and simplicity of the extensions increase, allowing non-developers to review and alter the code.
 
