@@ -19,6 +19,7 @@ class Artifact(DomainObjectWithUdfMixin):
         self.is_input = None  # Set to true if this is an input artifact
         self.generation_type = None  # Set to PER_INPUT or PER_ALL_INPUTS if applicable
         self.name = name
+        self.view_name = name
 
         # NOTE: This is currently only used in tests, so you can't trust that it has been set
         self.pairings = list()
