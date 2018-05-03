@@ -110,11 +110,7 @@ class ClarityMapper(object):
         samples = [self.sample_create_object(
             sample) for sample in resource.samples]
 
-        is_control = False
-        # TODO: This code principally belongs to the genologics layer, but
-        # 'control-type' does not exist there
-        if resource.root.find("control-type") is not None:
-            is_control = True
+        is_control = self._is_control(resource)
         # TODO: A better way to decide if analyte is output of a previous step?
         is_from_original = (resource.id.find("2-") != 0)
         analyte = Analyte(api_resource=resource, is_input=is_input, id=resource.id,
@@ -127,6 +123,10 @@ class ClarityMapper(object):
         self._after_object_created(analyte, resource)
         self.domain_map[resource.id] = analyte
         return analyte
+
+    def _is_control(self, api_resource):
+        # Pools are here never counted as controls (... samples == 1)
+        return api_resource.root.find("control-type") is not None and len(api_resource.samples) == 1
 
     def analyte_create_resource(self, analyte):
         pass
