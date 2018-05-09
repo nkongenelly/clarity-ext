@@ -184,7 +184,7 @@ class DilutionSession(object):
             csv = Csv(delim=robot_settings.delimiter, newline=robot_settings.newline)
             csv.file_name = robot_settings.get_filename(transfer_batch, self.context, ix)
             csv.set_header(robot_settings.header)
-            sorted_transfers = sorted(transfer_batch.transfers, key=robot_settings.transfer_sort_key)
+            sorted_transfers = sorted(transfer_batch.transfers, key=self.dilution_settings.sort_strategy)
             for transfer in sorted_transfers:
                 if robot_settings.include_transfer_in_output(transfer):
                     csv.append(robot_settings.map_transfer_to_row(transfer), transfer)
@@ -493,6 +493,45 @@ DilutionMeasurements = namedtuple('DilutionMeasurements', ['source_conc', 'sourc
 UpdateInfo = namedtuple("UpdateInfo", ['target_conc', 'target_vol', 'source_vol_delta'])
 
 
+class SortStrategy:
+    @staticmethod
+    def input_position_sort_key(transfer):
+        """
+        Sort the transfers based on:
+            - source position (container.index)
+            - source well index (down first)
+            - pipette volume (descending)
+            - target position (container.index)
+            - target well index (down first)
+        """
+        assert transfer.transfer_batch is not None
+        assert transfer.source_slot is not None
+        assert transfer.source_slot.index is not None
+        return (transfer.source_slot.index,
+                transfer.source_location.index_down_first,
+                -transfer.pipette_total_volume,
+                transfer.target_slot.index,
+                transfer.target_location.index_down_first)
+
+    def output_position_sort_key(self, transfer):
+        """
+        Sort the transfers based on:
+            - target position (container.index)
+            - target well index (down first)
+            - pipette volume (descending)
+            - source position (container.index)
+            - source well index (down first)
+        """
+        assert transfer.transfer_batch is not None
+        assert transfer.target_slot is not None
+        assert transfer.target_slot.index is not None
+        return (transfer.target_slot.index,
+                transfer.target_location.index_down_first,
+                -transfer.pipette_total_volume,
+                transfer.source_slot.index,
+                transfer.source_location.index_down_first)
+
+
 class DilutionSettings:
     """Defines the rules for how a dilution should be performed"""
     CONCENTRATION_REF_NGUL = 1
@@ -506,7 +545,8 @@ class DilutionSettings:
     }
 
     def __init__(self, scale_up_low_volumes=False, concentration_ref=None, include_blanks=False,
-                 volume_calc_method=None, make_pools=False, fixed_sample_volume=None, fixed_buffer_volume=None):
+                 volume_calc_method=None, make_pools=False, fixed_sample_volume=None,
+                 fixed_buffer_volume=None, sort_strategy=None):
         """
         :param dilution_waste_volume: Extra volume that should be subtracted from the sample volume
         to account for waste during dilution
@@ -525,6 +565,10 @@ class DilutionSettings:
         self.include_control = True
         self.fixed_sample_volume = fixed_sample_volume
         self.fixed_buffer_volume = fixed_buffer_volume
+        if sort_strategy is None:
+            strategy_bag = SortStrategy()
+            sort_strategy = strategy_bag.input_position_sort_key
+        self.sort_strategy = sort_strategy
 
         # NOTE: This is part of a quick-fix (used in one particular corner case)
         self.is_pooled = False
@@ -586,25 +630,6 @@ class RobotSettings(object):
     @staticmethod
     def target_container_name(transfer_location):
         return "END{}".format(transfer_location.container_pos)
-
-    @staticmethod
-    def transfer_sort_key(transfer):
-        """
-        Sort the transfers based on:
-            - source position (container.index)
-            - well index (down first)
-            - pipette volume (descending)
-            - target position (container.index)
-            - target well index (down first)
-        """
-        assert transfer.transfer_batch is not None
-        assert transfer.source_slot is not None
-        assert transfer.source_slot.index is not None
-        return (transfer.source_slot.index,
-                transfer.source_location.index_down_first,
-                -transfer.pipette_total_volume,
-                transfer.target_slot.index,
-                transfer.target_location.index_down_first)
 
     def __repr__(self):
         return "<RobotSettings {}>".format(self.name)
