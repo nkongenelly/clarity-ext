@@ -513,7 +513,8 @@ class SortStrategy:
                 transfer.target_slot.index,
                 transfer.target_location.index_down_first)
 
-    def output_position_sort_key(self, transfer):
+    @staticmethod
+    def output_position_sort_key(transfer):
         """
         Sort the transfers based on:
             - target position (container.index)
