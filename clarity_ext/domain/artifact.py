@@ -18,11 +18,20 @@ class Artifact(DomainObjectWithUdfMixin):
         super(Artifact, self).__init__(api_resource=api_resource, id=artifact_id, udf_map=udf_map)
         self.is_input = None  # Set to true if this is an input artifact
         self.generation_type = None  # Set to PER_INPUT or PER_ALL_INPUTS if applicable
-        self.name = name
+        self._name = name
         self.view_name = name
 
         # NOTE: This is currently only used in tests, so you can't trust that it has been set
         self.pairings = list()
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+        self.view_name = value
 
     def pair_as_output(self, input_artifact):
         return self.pair_together(input_artifact, self)
