@@ -167,3 +167,12 @@ class ArtifactService:
         """
         return [output for _, output in self.all_artifacts()
                 if output.generation_type == output.PER_INPUT]
+
+    def get_all_analyte_pairs_from_process(self, process):
+        """
+        Returns all analyte_pairs from a specific process
+        """
+        process_step_repo = StepRepository(ClaritySession.create(process.id),
+                                          self.step_repository.clarity_mapper)
+        parent_artifact_service = ArtifactService(process_step_repo)
+        return parent_artifact_service.all_analyte_pairs()
