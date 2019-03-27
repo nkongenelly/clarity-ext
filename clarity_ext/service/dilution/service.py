@@ -1,7 +1,9 @@
 import abc
 import copy
 import logging
+import re
 from itertools import groupby
+from itertools import chain
 from itertools import izip_longest
 import collections
 from collections import namedtuple
@@ -534,6 +536,34 @@ class SortStrategy:
                 -transfer.pipette_total_volume,
                 transfer.source_slot.index,
                 transfer.source_location.index_down_first)
+
+    @staticmethod
+    def container_sort_key(container):
+        """
+        Separates text and numbers in the container name
+        """
+        def conv_int(s):
+            if s.isdigit():
+                return int(s)
+            else:
+                return str(s)
+
+        def conv_lower(s):
+            return s.lower()
+
+        def zip_order(a_list):
+            # the list starting with an empty string should be sorted first into zip()
+            return len(a_list[0])
+
+        strings_in_name = re.split('[-_]*\d+[-_]*', container.name)
+        strings_in_name = map(conv_lower, strings_in_name)
+        numbers_in_name = re.split('[-_]*\D+[-_]*', container.name)
+        zip_arg = sorted([numbers_in_name, strings_in_name], key=zip_order)
+        zipped = zip(*zip_arg)
+        flatlist = list(chain(*zipped))
+        sortlist_of_strings = [item for item in flatlist if len(item) > 0]
+        sortlist = [container.sort_weight, not container.is_temporary] + map(conv_int, sortlist_of_strings)
+        return tuple(sortlist)
 
 
 class TubeRackPositioner:
