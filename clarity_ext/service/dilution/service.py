@@ -147,7 +147,8 @@ class DilutionSession(object):
         transfer_routes = dict()
 
         # Evaluate the transfers, i.e. execute all handlers. This does not group them into transfer batches yet
-        for transfer in transfers:
+        sorted_transfers = sorted(transfers, key=SortStrategy.input_position_pre_batching)
+        for transfer in sorted_transfers:
             route = self.evaluate_transfer_route(transfer, transfer_handlers)
             transfer_routes[transfer] = route
 
@@ -517,6 +518,17 @@ class SortStrategy:
                 -transfer.pipette_total_volume,
                 transfer.target_slot.index,
                 transfer.target_location.index_down_first)
+
+    @staticmethod
+    def input_position_pre_batching(transfer):
+        """
+        Sort transfers when plate placement on robot deck not yet is decided:
+        Sort on:
+            - source plate name
+            - source well index, down first
+        """
+        return (SortStrategy.container_sort_key(transfer.source_location.container),
+                transfer.source_location.index_down_first)
 
     @staticmethod
     def output_position_sort_key(transfer):
