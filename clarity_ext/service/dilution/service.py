@@ -9,6 +9,8 @@ from clarity_ext.service.file_service import Csv
 from clarity_ext.domain.validation import ValidationException, ValidationType, ValidationResults, UsageError
 from clarity_ext import utils
 from clarity_ext.domain import Container, Well
+from clarity_ext.domain.container import PlateSize
+from clarity_ext.domain.container import ContainerPosition
 
 
 class DilutionService(object):
@@ -139,6 +141,7 @@ class DilutionSession(object):
                                                                self.dilution_settings,
                                                                robot_settings,
                                                                virtual_batch)
+        robot_settings.set_max_destination_volume(transfers)
         transfer_routes = dict()
 
         # Evaluate the transfers, i.e. execute all handlers. This does not group them into transfer batches yet
@@ -533,6 +536,58 @@ class SortStrategy:
                 transfer.source_location.index_down_first)
 
 
+class TubeRackPositioner:
+    """
+    Positions tubes in tube racks.
+    Holds a state on how many tube racks is needed, and
+    a mapping between tubes and positions in tube racks
+    """
+    def __init__(self, plate_size):
+        self.tube_racks = list()
+        self.tube_rack_id_counter = 1
+        self.tube_counter = 1
+        self.size = plate_size
+        self.number_of_wells = self.size.height * self.size.width
+        self.current_well_pos = None
+
+    def add(self, well):
+        """
+        Place the tube for the input well into a tube rack
+        :param well: This is the single well for a tube
+        :return:
+        """
+        position_index = (self.tube_counter - 1) % self.number_of_wells
+        tube_rack_index = (self.tube_counter - 1) // self.number_of_wells
+        self.tube_counter += 1
+        if len(self.tube_racks) < tube_rack_index + 1:
+            self._create_new_tube_rack()
+        row_ind, col_ind = self._convert_to_coordinates(position_index)
+        self.current_well_pos = ContainerPosition(row_ind + 1, col_ind + 1)
+
+        self.tube_racks[-1].set_well(well_pos=self.current_well_pos, artifact=well.artifact)
+
+    @property
+    def last_populated_well(self):
+        return self.tube_racks[-1].wells[self.current_well_pos]
+
+    def _convert_to_coordinates(self, position_index):
+        rowind = position_index % self.size.height
+        colind = position_index // self.size.height
+        return rowind, colind
+
+    def _convert_to_position(self, row_ind, col_ind):
+        container_position = ContainerPosition(row_ind + 1, col_ind + 1)
+        return '{}'.format(container_position)
+
+    def _create_new_tube_rack(self):
+        id = '{}{}'.format('tuberack', self.tube_rack_id_counter)
+        self.tube_rack_id_counter += 1
+        tube_rack = Container(size=PlateSize(height=4, width=6),
+                              container_type=Container.CONTAINER_TYPE_96_WELLS_PLATE,
+                              container_id=id, name=id, is_source=False)
+        self.tube_racks.append(tube_rack)
+
+
 class DilutionSettings:
     """Defines the rules for how a dilution should be performed"""
     CONCENTRATION_REF_NGUL = 1
@@ -631,6 +686,14 @@ class RobotSettings(object):
     @staticmethod
     def target_container_name(transfer_location):
         return "END{}".format(transfer_location.container_pos)
+
+    @abc.abstractmethod
+    def set_max_destination_volume(self, transfers):
+        """
+        Set max allowed destination volume according to the target container type,
+        e.g. if it's tubes or plates
+        """
+        pass
 
     def __repr__(self):
         return "<RobotSettings {}>".format(self.name)
@@ -898,6 +961,7 @@ class TransferBatchHandlerBase(TransferHandlerBase):
 
     def warning(self, msg, batch):
         batch.validation_results.append(ValidationException(msg, ValidationType.WARNING))
+
 
 class TransferSplitHandlerBase(TransferHandlerBase):
     """Base class for handlers that can split one transfer into more"""
