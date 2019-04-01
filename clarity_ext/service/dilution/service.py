@@ -64,7 +64,6 @@ class DilutionSession(object):
         self.logger = logger or logging.getLogger(__name__)
         self.transfer_handler_types = transfer_handler_types
         self.transfer_batch_handler_types = transfer_batch_handler_types
-        self.map_temporary_container_by_original = dict()
         self.max_pipette_vol_for_row_split = None
 
     def evaluate(self, pairs):
@@ -95,21 +94,6 @@ class DilutionSession(object):
         for batch_handler_type in batch_handler_types:
             batch_handlers.append(batch_handler_type(self, dilution_settings, robot_settings, virtual_batch))
         return transfer_handlers, batch_handlers
-
-    def get_temporary_container(self, target_container, prefix, start_id, container_template=None):
-        """Returns the temporary container that should be used
-        rather than the original one, when splitting transfers"""
-        if target_container.id not in self.map_temporary_container_by_original:
-            if container_template is None:
-                container_template = target_container
-            temp_container = Container.create_from_container(container_template)
-            id = int(start_id) + len(self.map_temporary_container_by_original)
-            temp_container.id = str(id)
-            name = '{}{}'.format(prefix, len(self.map_temporary_container_by_original) + 1)
-            temp_container.name = name
-            temp_container.is_temporary = True
-            self.map_temporary_container_by_original[target_container.id] = temp_container
-        return self.map_temporary_container_by_original[target_container.id]
 
     def _evaluate_transfer_route_rec(self, current, transfer_handlers, handler_ix):
         if handler_ix == len(transfer_handlers):
@@ -644,6 +628,29 @@ class TubeRackPositioner:
                               container_type=Container.CONTAINER_TYPE_96_WELLS_PLATE,
                               container_id=id, name=name, is_source=False)
         self.tube_racks.append(tube_rack)
+
+
+class TempPlateProvider:
+    def __init__(self, prefix, start_id, container_template=None):
+        self.map_temporary_container_by_original = dict()
+        self.prefix = prefix
+        self.start_id = start_id
+        self.container_template = container_template
+
+    def get_container(self, target_container):
+        """Returns the temporary container that should be used
+        rather than the original one, when splitting transfers"""
+        if target_container.id not in self.map_temporary_container_by_original:
+            container_template = target_container if self.container_template is None \
+                else self.container_template
+            temp_container = Container.create_from_container(container_template)
+            id = int(self.start_id) + len(self.map_temporary_container_by_original)
+            temp_container.id = str(id)
+            name = '{}{}'.format(self.prefix, len(self.map_temporary_container_by_original) + 1)
+            temp_container.name = name
+            temp_container.is_temporary = True
+            self.map_temporary_container_by_original[target_container.id] = temp_container
+        return self.map_temporary_container_by_original[target_container.id]
 
 
 class DilutionSettings:
