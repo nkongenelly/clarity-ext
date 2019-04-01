@@ -4,7 +4,6 @@ import logging
 import re
 from itertools import groupby
 from itertools import chain
-from itertools import izip_longest
 import collections
 from collections import namedtuple
 from clarity_ext.service.file_service import Csv
@@ -97,12 +96,17 @@ class DilutionSession(object):
             batch_handlers.append(batch_handler_type(self, dilution_settings, robot_settings, virtual_batch))
         return transfer_handlers, batch_handlers
 
-    def get_temporary_container(self, target_container, prefix):
-        """Returns the temporary container that should be used rather than the original one, when splitting transfers"""
+    def get_temporary_container(self, target_container, prefix, start_id, container_template=None):
+        """Returns the temporary container that should be used
+        rather than the original one, when splitting transfers"""
         if target_container.id not in self.map_temporary_container_by_original:
-            temp_container = Container.create_from_container(target_container)
-            temp_container.id = "{}{}".format(prefix, len(self.map_temporary_container_by_original) + 1)
-            temp_container.name = temp_container.id
+            if container_template is None:
+                container_template = target_container
+            temp_container = Container.create_from_container(container_template)
+            id = int(start_id) + len(self.map_temporary_container_by_original)
+            temp_container.id = str(id)
+            name = '{}{}'.format(prefix, len(self.map_temporary_container_by_original) + 1)
+            temp_container.name = name
             temp_container.is_temporary = True
             self.map_temporary_container_by_original[target_container.id] = temp_container
         return self.map_temporary_container_by_original[target_container.id]
