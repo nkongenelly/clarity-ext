@@ -64,7 +64,7 @@ class DilutionSession(object):
         self.logger = logger or logging.getLogger(__name__)
         self.transfer_handler_types = transfer_handler_types
         self.transfer_batch_handler_types = transfer_batch_handler_types
-        self.max_pipette_vol_for_row_split = None
+        self.max_destination_volume = None
 
     def evaluate(self, pairs):
         """Refreshes all calculations for all registered robots and runs registered handlers and validators."""
@@ -122,9 +122,9 @@ class DilutionSession(object):
     def set_max_destination_volume(self, transfers, robotsettings):
         dest_type = self._get_destination_container_type(transfers)
         if dest_type == Container.CONTAINER_TYPE_TUBE:
-            self.max_pipette_vol_for_row_split = robotsettings.max_pipette_vol_for_row_split_tube
+            self.max_destination_volume = robotsettings.max_destination_volume_tube
         else:
-            self.max_pipette_vol_for_row_split = robotsettings.max_pipette_vol_for_row_split_plate
+            self.max_destination_volume = robotsettings.max_destination_volume_plate
 
     def _get_destination_container_type(self, transfers):
         types = list(set([t.target_location.artifact.container.container_type for t in transfers]))
@@ -722,7 +722,7 @@ class RobotSettings(object):
         self.dilution_waste_volume = None
         self.pipette_min_volume = None
         self.pipette_max_volume = None
-        self.max_pipette_vol_for_row_split = None
+        self.max_destination_volume = None
 
     def include_transfer_in_output(self, transfer):
         return True
