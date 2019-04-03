@@ -584,9 +584,11 @@ class TubeRackPositioner:
     Holds a state on how many tube racks is needed, and
     a mapping between tubes and positions in tube racks
     """
+    TUBE_RACK_START_ID = 1211111111
+
     def __init__(self, plate_size):
         self.tube_racks = list()
-        self.tube_rack_id_counter = 1
+        self.tube_rack_id_counter = 0
         self.tube_counter = 1
         self.size = plate_size
         self.number_of_wells = self.size.height * self.size.width
@@ -622,11 +624,13 @@ class TubeRackPositioner:
         return '{}'.format(container_position)
 
     def _create_new_tube_rack(self):
-        id = '{}{}'.format('tuberack', self.tube_rack_id_counter)
+        id = self.TUBE_RACK_START_ID + self.tube_rack_id_counter
+        id = str(id)
+        name = 'Tuberack{}'.format(self.tube_rack_id_counter + 1)
         self.tube_rack_id_counter += 1
         tube_rack = Container(size=PlateSize(height=4, width=6),
                               container_type=Container.CONTAINER_TYPE_96_WELLS_PLATE,
-                              container_id=id, name=id, is_source=False)
+                              container_id=id, name=name, is_source=False)
         self.tube_racks.append(tube_rack)
 
 
