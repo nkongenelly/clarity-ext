@@ -213,6 +213,7 @@ class DilutionSession(object):
         original_containers = set()
         original_containers.update([pair.input_artifact.container for pair in pairs])
         original_containers.update([pair.output_artifact.container for pair in pairs])
+
         for original_container in original_containers:
             containers[original_container.id] = copy.copy(original_container)
 
@@ -593,26 +594,52 @@ class TubeRackPositioner:
         self.size = plate_size
         self.number_of_wells = self.size.height * self.size.width
         self.current_well_pos = None
+        self.current_tube_ind = -1
 
     def add(self, well):
         """
         Place the tube for the input well into a tube rack
+        If artifact for well already exists in tube racks (for pools),
+        don't add new tube, just update current_well_pos
         :param well: This is the single well for a tube
         :return:
         """
-        position_index = (self.tube_counter - 1) % self.number_of_wells
-        tube_rack_index = (self.tube_counter - 1) // self.number_of_wells
-        self.tube_counter += 1
-        if len(self.tube_racks) < tube_rack_index + 1:
-            self._create_new_tube_rack()
-        row_ind, col_ind = self._convert_to_coordinates(position_index)
+        if self._exists_since_before(well.artifact):
+            row_ind, col_ind = self._coordinates_for_artifact(well.artifact)
+            self.current_tube_ind = self._tube_ind_for_artifact(well.artifact)
+        else:
+            position_index = (self.tube_counter - 1) % self.number_of_wells
+            tube_rack_index = (self.tube_counter - 1) // self.number_of_wells
+            self.tube_counter += 1
+            if len(self.tube_racks) < tube_rack_index + 1:
+                self._create_new_tube_rack()
+            row_ind, col_ind = self._convert_to_coordinates(position_index)
+            well_pos = ContainerPosition(row_ind + 1, col_ind + 1)
+            self.tube_racks[-1].set_well(well_pos=well_pos, artifact=well.artifact)
+            self.current_tube_ind = -1
         self.current_well_pos = ContainerPosition(row_ind + 1, col_ind + 1)
 
-        self.tube_racks[-1].set_well(well_pos=self.current_well_pos, artifact=well.artifact)
-
     @property
-    def last_populated_well(self):
-        return self.tube_racks[-1].wells[self.current_well_pos]
+    def well_for_last_artifact(self):
+        return self.tube_racks[self.current_tube_ind].wells[self.current_well_pos]
+
+    def _find_well(self, artifact):
+        for tube_rack in self.tube_racks:
+            for well in tube_rack.list_wells():
+                if well.artifact is not None and artifact.id == well.artifact.id:
+                    return well
+        return None
+
+    def _coordinates_for_artifact(self, artifact):
+        well = self._find_well(artifact)
+        return self._convert_to_coordinates(well.index_down_first - 1)
+
+    def _tube_ind_for_artifact(self, artifact):
+        well = self._find_well(artifact)
+        return self.tube_racks.index(well.container)
+
+    def _exists_since_before(self, artifact):
+        return self._find_well(artifact) is not None
 
     def _convert_to_coordinates(self, position_index):
         rowind = position_index % self.size.height

@@ -236,6 +236,7 @@ class StepScenario(object):
 
     def __init__(self, context_wrapper):
         self.input_containers = list()
+        self.output_containers = list()
         self.analytes = list()
         self.pairs = list()
         self.analytes = list()
@@ -261,14 +262,29 @@ class PoolSamplesScenario(StepScenario):
         self.pools = list()
 
     def add_input_container(self, name=None, size=None, container_id=None):
+        return self._add_container(for_input_artifact=True, name=name, size=size, container_id=container_id)
+
+    def add_output_container(self, name=None, size=None, container_id=None,
+                             container_type=Container.CONTAINER_TYPE_96_WELLS_PLATE):
+        return self._add_container(for_input_artifact=False, name=name, size=size, container_id=container_id,
+                                   container_type=container_type)
+
+    def _add_container(self, for_input_artifact=True, name=None, size=None, container_id=None,
+                       container_type=Container.CONTAINER_TYPE_96_WELLS_PLATE):
+        if for_input_artifact:
+            containers = self.input_containers
+            prefix = 'incont'
+        else:
+            containers = self.output_containers
+            prefix = 'outcont'
         if name is None:
             name = ''
         if size is None:
             size = PlateSize(height=8, width=12)
         if container_id is None:
-            container_id = "incont_{}".format(len(self.input_containers))
-        container = Container(name=name, size=size, container_id=container_id)
-        self.input_containers.append(container)
+            container_id = "{}_{}".format(prefix, len(self.input_containers))
+        container = Container(name=name, size=size, container_id=container_id, container_type=container_type)
+        containers.append(container)
         return self
 
     def add_input_analyte(self, name=None, analyte_id=None, input_container_ref=-1):
@@ -283,7 +299,12 @@ class PoolSamplesScenario(StepScenario):
         return self
 
     def create_pool(self, name=None, analyte_id=None):
+        last_container = None
+        if len(self.output_containers) > 0:
+            last_container = self.output_containers[-1]
         pool = self.create_analyte(False, name, analyte_id)
+        if last_container:
+            last_container.append(pool)
         pool.samples = list()  # Emptying it, as the helper creates them by default
         self.pools.append(pool)
         return self
