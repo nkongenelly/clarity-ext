@@ -190,7 +190,8 @@ class DilutionSession(object):
             csv = Csv(delim=robot_settings.delimiter, newline=robot_settings.newline)
             csv.file_name = robot_settings.get_filename(transfer_batch, self.context, ix)
             csv.set_header(robot_settings.header)
-            sorted_transfers = sorted(transfer_batch.transfers, key=self.dilution_settings.sort_strategy)
+            sorted_transfers = sorted(transfer_batch.transfers,
+                                      key=self.dilution_settings.robotfile_sort_strategy)
             for transfer in sorted_transfers:
                 if robot_settings.include_transfer_in_output(transfer):
                     csv.append(robot_settings.map_transfer_to_row(transfer), transfer)
@@ -694,7 +695,7 @@ class DilutionSettings:
 
     def __init__(self, scale_up_low_volumes=False, concentration_ref=None, include_blanks=False,
                  volume_calc_method=None, make_pools=False, fixed_sample_volume=None,
-                 fixed_buffer_volume=None, sort_strategy=None):
+                 fixed_buffer_volume=None, robotfile_sort_strategy=None):
         """
         :param dilution_waste_volume: Extra volume that should be subtracted from the sample volume
         to account for waste during dilution
@@ -713,10 +714,10 @@ class DilutionSettings:
         self.include_control = True
         self.fixed_sample_volume = fixed_sample_volume
         self.fixed_buffer_volume = fixed_buffer_volume
-        if sort_strategy is None:
+        if robotfile_sort_strategy is None:
             strategy_bag = SortStrategy()
-            sort_strategy = strategy_bag.input_position_sort_key
-        self.sort_strategy = sort_strategy
+            robotfile_sort_strategy = strategy_bag.input_position_sort_key
+        self.robotfile_sort_strategy = robotfile_sort_strategy
 
         # NOTE: This is part of a quick-fix (used in one particular corner case)
         self.is_pooled = False
