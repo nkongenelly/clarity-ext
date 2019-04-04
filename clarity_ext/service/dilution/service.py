@@ -128,7 +128,13 @@ class DilutionSession(object):
 
     def _get_destination_container_type(self, transfers):
         types = list(set([t.target_location.artifact.container.container_type for t in transfers]))
-        return types[0]
+        return utils.single(types)
+
+    def _sorted_transfers(self, original_transfers):
+        sort_strategy = self.dilution_settings.tube_placement_sort_strategy
+        if sort_strategy is not None:
+            return sorted(original_transfers, key=sort_strategy)
+        return original_transfers
 
     def create_batches(self, pairs, robot_settings):
         # Create the original "virtual" transfers. These represent what we would like to happen:
@@ -147,7 +153,7 @@ class DilutionSession(object):
         transfer_routes = dict()
 
         # Evaluate the transfers, i.e. execute all handlers. This does not group them into transfer batches yet
-        sorted_transfers = sorted(transfers, key=SortStrategy.input_position_pre_batching)
+        sorted_transfers = self._sorted_transfers(transfers)
         for transfer in sorted_transfers:
             route = self.evaluate_transfer_route(transfer, transfer_handlers)
             transfer_routes[transfer] = route
@@ -524,13 +530,26 @@ class SortStrategy:
     @staticmethod
     def input_position_pre_batching(transfer):
         """
-        Sort transfers when plate placement on robot deck not yet is decided:
+        Sort transfers when plate/tuberack placement on robot deck not yet is decided:
         Sort on:
             - source plate name
             - source well index, down first
         """
         return (SortStrategy.container_sort_key(transfer.source_location.container),
                 transfer.source_location.index_down_first)
+
+    @staticmethod
+    def output_position_pre_batching(transfer):
+        """
+        Sort transfers when plate/tuberack placement on robot is deck not yet decided:
+        Sort on:
+            - target container name
+            - target well index, down first (for tubes its always 1)
+        """
+        return (
+            SortStrategy.container_sort_key(transfer.target_location.container),
+            transfer.target_location.index_down_first
+        )
 
     @staticmethod
     def output_position_sort_key(transfer):
@@ -695,7 +714,8 @@ class DilutionSettings:
 
     def __init__(self, scale_up_low_volumes=False, concentration_ref=None, include_blanks=False,
                  volume_calc_method=None, make_pools=False, fixed_sample_volume=None,
-                 fixed_buffer_volume=None, robotfile_sort_strategy=None):
+                 fixed_buffer_volume=None, robotfile_sort_strategy=None,
+                 tube_placement_sort_strategy=None):
         """
         :param dilution_waste_volume: Extra volume that should be subtracted from the sample volume
         to account for waste during dilution
@@ -718,6 +738,7 @@ class DilutionSettings:
             strategy_bag = SortStrategy()
             robotfile_sort_strategy = strategy_bag.input_position_sort_key
         self.robotfile_sort_strategy = robotfile_sort_strategy
+        self.tube_placement_sort_strategy = tube_placement_sort_strategy
 
         # NOTE: This is part of a quick-fix (used in one particular corner case)
         self.is_pooled = False
