@@ -119,7 +119,6 @@ class ClarityMapper(object):
                           udf_map=udf_map,
                           is_from_original=is_from_original)
         analyte.api_resource = resource
-        analyte.reagent_labels = resource.reagent_labels
         self._after_object_created(analyte, resource)
         self.domain_map[resource.id] = analyte
         return analyte
