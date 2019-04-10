@@ -1,7 +1,9 @@
 import abc
 import copy
 import logging
+import re
 from itertools import groupby
+from itertools import chain
 from itertools import izip_longest
 import collections
 from collections import namedtuple
@@ -9,6 +11,8 @@ from clarity_ext.service.file_service import Csv
 from clarity_ext.domain.validation import ValidationException, ValidationType, ValidationResults, UsageError
 from clarity_ext import utils
 from clarity_ext.domain import Container, Well
+from clarity_ext.domain.container import PlateSize
+from clarity_ext.domain.container import ContainerPosition
 
 
 class DilutionService(object):
@@ -62,6 +66,7 @@ class DilutionSession(object):
         self.transfer_handler_types = transfer_handler_types
         self.transfer_batch_handler_types = transfer_batch_handler_types
         self.map_temporary_container_by_original = dict()
+        self.max_pipette_vol_for_row_split = None
 
     def evaluate(self, pairs):
         """Refreshes all calculations for all registered robots and runs registered handlers and validators."""
@@ -126,6 +131,17 @@ class DilutionSession(object):
         self._evaluate_transfer_route_rec(root, transfer_handlers, 0)
         return TransferRoute(root, transfer_handlers)
 
+    def set_max_destination_volume(self, transfers, robotsettings):
+        dest_type = self._get_destination_container_type(transfers)
+        if dest_type == Container.CONTAINER_TYPE_TUBE:
+            self.max_pipette_vol_for_row_split = robotsettings.max_pipette_vol_for_row_split_tube
+        else:
+            self.max_pipette_vol_for_row_split = robotsettings.max_pipette_vol_for_row_split_plate
+
+    def _get_destination_container_type(self, transfers):
+        types = list(set([t.target_location.artifact.container.container_type for t in transfers]))
+        return types[0]
+
     def create_batches(self, pairs, robot_settings):
         # Create the original "virtual" transfers. These represent what we would like to happen:
         transfers = self.create_transfers_from_pairs(pairs)
@@ -139,10 +155,12 @@ class DilutionSession(object):
                                                                self.dilution_settings,
                                                                robot_settings,
                                                                virtual_batch)
+        self.set_max_destination_volume(transfers, robot_settings)
         transfer_routes = dict()
 
         # Evaluate the transfers, i.e. execute all handlers. This does not group them into transfer batches yet
-        for transfer in transfers:
+        sorted_transfers = sorted(transfers, key=SortStrategy.input_position_pre_batching)
+        for transfer in sorted_transfers:
             route = self.evaluate_transfer_route(transfer, transfer_handlers)
             transfer_routes[transfer] = route
 
@@ -514,6 +532,17 @@ class SortStrategy:
                 transfer.target_location.index_down_first)
 
     @staticmethod
+    def input_position_pre_batching(transfer):
+        """
+        Sort transfers when plate placement on robot deck not yet is decided:
+        Sort on:
+            - source plate name
+            - source well index, down first
+        """
+        return (SortStrategy.container_sort_key(transfer.source_location.container),
+                transfer.source_location.index_down_first)
+
+    @staticmethod
     def output_position_sort_key(transfer):
         """
         Sort the transfers based on:
@@ -531,6 +560,86 @@ class SortStrategy:
                 -transfer.pipette_total_volume,
                 transfer.source_slot.index,
                 transfer.source_location.index_down_first)
+
+    @staticmethod
+    def container_sort_key(container):
+        """
+        Separates text and numbers in the container name
+        """
+        def conv_int(s):
+            if s.isdigit():
+                return int(s)
+            else:
+                return str(s)
+
+        def conv_lower(s):
+            return s.lower()
+
+        def zip_order(a_list):
+            # the list starting with an empty string should be sorted first into zip()
+            return len(a_list[0])
+
+        strings_in_name = re.split('[-_]*\d+[-_]*', container.name)
+        strings_in_name = map(conv_lower, strings_in_name)
+        numbers_in_name = re.split('[-_]*\D+[-_]*', container.name)
+        zip_arg = sorted([numbers_in_name, strings_in_name], key=zip_order)
+        zipped = zip(*zip_arg)
+        flatlist = list(chain(*zipped))
+        sortlist_of_strings = [item for item in flatlist if len(item) > 0]
+        sortlist = [container.sort_weight, not container.is_temporary] + map(conv_int, sortlist_of_strings)
+        return tuple(sortlist)
+
+
+class TubeRackPositioner:
+    """
+    Positions tubes in tube racks.
+    Holds a state on how many tube racks is needed, and
+    a mapping between tubes and positions in tube racks
+    """
+    TUBE_RACK_START_ID = 1211111111
+
+    def __init__(self, plate_size):
+        self.tube_racks = list()
+        self.tube_rack_id_counter = 0
+        self.tube_counter = 1
+        self.size = plate_size
+        self.number_of_wells = self.size.height * self.size.width
+        self.current_well_pos = None
+
+    def add(self, well):
+        """
+        Place the tube for the input well into a tube rack
+        :param well: This is the single well for a tube
+        :return:
+        """
+        position_index = (self.tube_counter - 1) % self.number_of_wells
+        tube_rack_index = (self.tube_counter - 1) // self.number_of_wells
+        self.tube_counter += 1
+        if len(self.tube_racks) < tube_rack_index + 1:
+            self._create_new_tube_rack()
+        row_ind, col_ind = self._convert_to_coordinates(position_index)
+        self.current_well_pos = ContainerPosition(row_ind + 1, col_ind + 1)
+
+        self.tube_racks[-1].set_well(well_pos=self.current_well_pos, artifact=well.artifact)
+
+    @property
+    def last_populated_well(self):
+        return self.tube_racks[-1].wells[self.current_well_pos]
+
+    def _convert_to_coordinates(self, position_index):
+        rowind = position_index % self.size.height
+        colind = position_index // self.size.height
+        return rowind, colind
+
+    def _create_new_tube_rack(self):
+        id = self.TUBE_RACK_START_ID + self.tube_rack_id_counter
+        id = str(id)
+        name = 'Tuberack{}'.format(self.tube_rack_id_counter + 1)
+        self.tube_rack_id_counter += 1
+        tube_rack = Container(size=PlateSize(height=4, width=6),
+                              container_type=Container.CONTAINER_TYPE_96_WELLS_PLATE,
+                              container_id=id, name=name, is_source=False)
+        self.tube_racks.append(tube_rack)
 
 
 class DilutionSettings:
@@ -898,6 +1007,7 @@ class TransferBatchHandlerBase(TransferHandlerBase):
 
     def warning(self, msg, batch):
         batch.validation_results.append(ValidationException(msg, ValidationType.WARNING))
+
 
 class TransferSplitHandlerBase(TransferHandlerBase):
     """Base class for handlers that can split one transfer into more"""

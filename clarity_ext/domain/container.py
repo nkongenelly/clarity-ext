@@ -104,6 +104,7 @@ class Container(DomainObjectWithUdfMixin):
     RIGHT_FIRST = 2
 
     CONTAINER_TYPE_96_WELLS_PLATE = "96 well plate"
+    CONTAINER_TYPE_TUBE = "Tube"
 
     def __init__(self, mapping=None, size=None, container_type=None,
                  container_id=None, name=None, is_source=None, append_order=DOWN_FIRST, sort_weight=0, udf_map=None):
@@ -180,6 +181,8 @@ class Container(DomainObjectWithUdfMixin):
     def size_from_container_type(self, container_type):
         if container_type == self.CONTAINER_TYPE_96_WELLS_PLATE:
             return PlateSize(height=8, width=12)
+        if container_type == self.CONTAINER_TYPE_TUBE:
+            return PlateSize(height=1, width=1)
         else:
             raise ValueError("Can't initialize container size from plate name {}".format(container_type))
 
