@@ -66,6 +66,7 @@ class DilutionSession(object):
         self.transfer_handler_types = transfer_handler_types
         self.transfer_batch_handler_types = transfer_batch_handler_types
         self.map_temporary_container_by_original = dict()
+        self.max_pipette_vol_for_row_split = None
 
     def evaluate(self, pairs):
         """Refreshes all calculations for all registered robots and runs registered handlers and validators."""
@@ -130,6 +131,17 @@ class DilutionSession(object):
         self._evaluate_transfer_route_rec(root, transfer_handlers, 0)
         return TransferRoute(root, transfer_handlers)
 
+    def set_max_destination_volume(self, transfers, robotsettings):
+        dest_type = self._get_destination_container_type(transfers)
+        if dest_type == Container.CONTAINER_TYPE_TUBE:
+            self.max_pipette_vol_for_row_split = robotsettings.max_pipette_vol_for_row_split_tube
+        else:
+            self.max_pipette_vol_for_row_split = robotsettings.max_pipette_vol_for_row_split_plate
+
+    def _get_destination_container_type(self, transfers):
+        types = list(set([t.target_location.artifact.container.container_type for t in transfers]))
+        return types[0]
+
     def create_batches(self, pairs, robot_settings):
         # Create the original "virtual" transfers. These represent what we would like to happen:
         transfers = self.create_transfers_from_pairs(pairs)
@@ -143,7 +155,7 @@ class DilutionSession(object):
                                                                self.dilution_settings,
                                                                robot_settings,
                                                                virtual_batch)
-        robot_settings.set_max_destination_volume(transfers)
+        self.set_max_destination_volume(transfers, robot_settings)
         transfer_routes = dict()
 
         # Evaluate the transfers, i.e. execute all handlers. This does not group them into transfer batches yet
@@ -619,10 +631,6 @@ class TubeRackPositioner:
         colind = position_index // self.size.height
         return rowind, colind
 
-    def _convert_to_position(self, row_ind, col_ind):
-        container_position = ContainerPosition(row_ind + 1, col_ind + 1)
-        return '{}'.format(container_position)
-
     def _create_new_tube_rack(self):
         id = self.TUBE_RACK_START_ID + self.tube_rack_id_counter
         id = str(id)
@@ -732,14 +740,6 @@ class RobotSettings(object):
     @staticmethod
     def target_container_name(transfer_location):
         return "END{}".format(transfer_location.container_pos)
-
-    @abc.abstractmethod
-    def set_max_destination_volume(self, transfers):
-        """
-        Set max allowed destination volume according to the target container type,
-        e.g. if it's tubes or plates
-        """
-        pass
 
     def __repr__(self):
         return "<RobotSettings {}>".format(self.name)
