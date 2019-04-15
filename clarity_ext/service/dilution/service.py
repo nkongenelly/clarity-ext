@@ -64,7 +64,7 @@ class DilutionSession(object):
         self.logger = logger or logging.getLogger(__name__)
         self.transfer_handler_types = transfer_handler_types
         self.transfer_batch_handler_types = transfer_batch_handler_types
-        self.max_pipette_vol_for_row_split = None
+        self.max_destination_volume = None
 
     def evaluate(self, pairs):
         """Refreshes all calculations for all registered robots and runs registered handlers and validators."""
@@ -122,13 +122,19 @@ class DilutionSession(object):
     def set_max_destination_volume(self, transfers, robotsettings):
         dest_type = self._get_destination_container_type(transfers)
         if dest_type == Container.CONTAINER_TYPE_TUBE:
-            self.max_pipette_vol_for_row_split = robotsettings.max_pipette_vol_for_row_split_tube
+            self.max_destination_volume = robotsettings.max_destination_volume_tube
         else:
-            self.max_pipette_vol_for_row_split = robotsettings.max_pipette_vol_for_row_split_plate
+            self.max_destination_volume = robotsettings.max_destination_volume_plate
 
     def _get_destination_container_type(self, transfers):
         types = list(set([t.target_location.artifact.container.container_type for t in transfers]))
-        return types[0]
+        return utils.single(types)
+
+    def _sorted_transfers(self, original_transfers):
+        sort_strategy = self.dilution_settings.tube_placement_sort_strategy
+        if sort_strategy is not None:
+            return sorted(original_transfers, key=sort_strategy)
+        return original_transfers
 
     def create_batches(self, pairs, robot_settings):
         # Create the original "virtual" transfers. These represent what we would like to happen:
@@ -147,7 +153,7 @@ class DilutionSession(object):
         transfer_routes = dict()
 
         # Evaluate the transfers, i.e. execute all handlers. This does not group them into transfer batches yet
-        sorted_transfers = sorted(transfers, key=SortStrategy.input_position_pre_batching)
+        sorted_transfers = self._sorted_transfers(transfers)
         for transfer in sorted_transfers:
             route = self.evaluate_transfer_route(transfer, transfer_handlers)
             transfer_routes[transfer] = route
@@ -190,7 +196,8 @@ class DilutionSession(object):
             csv = Csv(delim=robot_settings.delimiter, newline=robot_settings.newline)
             csv.file_name = robot_settings.get_filename(transfer_batch, self.context, ix)
             csv.set_header(robot_settings.header)
-            sorted_transfers = sorted(transfer_batch.transfers, key=self.dilution_settings.sort_strategy)
+            sorted_transfers = sorted(transfer_batch.transfers,
+                                      key=self.dilution_settings.robotfile_sort_strategy)
             for transfer in sorted_transfers:
                 if robot_settings.include_transfer_in_output(transfer):
                     csv.append(robot_settings.map_transfer_to_row(transfer), transfer)
@@ -213,6 +220,7 @@ class DilutionSession(object):
         original_containers = set()
         original_containers.update([pair.input_artifact.container for pair in pairs])
         original_containers.update([pair.output_artifact.container for pair in pairs])
+
         for original_container in original_containers:
             containers[original_container.id] = copy.copy(original_container)
 
@@ -522,13 +530,26 @@ class SortStrategy:
     @staticmethod
     def input_position_pre_batching(transfer):
         """
-        Sort transfers when plate placement on robot deck not yet is decided:
+        Sort transfers when plate/tuberack placement on robot deck not yet is decided:
         Sort on:
             - source plate name
             - source well index, down first
         """
         return (SortStrategy.container_sort_key(transfer.source_location.container),
                 transfer.source_location.index_down_first)
+
+    @staticmethod
+    def output_position_pre_batching(transfer):
+        """
+        Sort transfers when plate/tuberack placement on robot is deck not yet decided:
+        Sort on:
+            - target container name
+            - target well index, down first (for tubes its always 1)
+        """
+        return (
+            SortStrategy.container_sort_key(transfer.target_location.container),
+            transfer.target_location.index_down_first
+        )
 
     @staticmethod
     def output_position_sort_key(transfer):
@@ -593,26 +614,52 @@ class TubeRackPositioner:
         self.size = plate_size
         self.number_of_wells = self.size.height * self.size.width
         self.current_well_pos = None
+        self.current_tube_ind = -1
 
     def add(self, well):
         """
         Place the tube for the input well into a tube rack
+        If artifact for well already exists in tube racks (for pools),
+        don't add new tube, just update current_well_pos
         :param well: This is the single well for a tube
         :return:
         """
-        position_index = (self.tube_counter - 1) % self.number_of_wells
-        tube_rack_index = (self.tube_counter - 1) // self.number_of_wells
-        self.tube_counter += 1
-        if len(self.tube_racks) < tube_rack_index + 1:
-            self._create_new_tube_rack()
-        row_ind, col_ind = self._convert_to_coordinates(position_index)
+        if self._exists_since_before(well.artifact):
+            row_ind, col_ind = self._coordinates_for_artifact(well.artifact)
+            self.current_tube_ind = self._tube_ind_for_artifact(well.artifact)
+        else:
+            position_index = (self.tube_counter - 1) % self.number_of_wells
+            tube_rack_index = (self.tube_counter - 1) // self.number_of_wells
+            self.tube_counter += 1
+            if len(self.tube_racks) < tube_rack_index + 1:
+                self._create_new_tube_rack()
+            row_ind, col_ind = self._convert_to_coordinates(position_index)
+            well_pos = ContainerPosition(row_ind + 1, col_ind + 1)
+            self.tube_racks[-1].set_well(well_pos=well_pos, artifact=well.artifact)
+            self.current_tube_ind = -1
         self.current_well_pos = ContainerPosition(row_ind + 1, col_ind + 1)
 
-        self.tube_racks[-1].set_well(well_pos=self.current_well_pos, artifact=well.artifact)
-
     @property
-    def last_populated_well(self):
-        return self.tube_racks[-1].wells[self.current_well_pos]
+    def well_for_last_artifact(self):
+        return self.tube_racks[self.current_tube_ind].wells[self.current_well_pos]
+
+    def _find_well(self, artifact):
+        for tube_rack in self.tube_racks:
+            for well in tube_rack.list_wells():
+                if well.artifact is not None and artifact.id == well.artifact.id:
+                    return well
+        return None
+
+    def _coordinates_for_artifact(self, artifact):
+        well = self._find_well(artifact)
+        return self._convert_to_coordinates(well.index_down_first - 1)
+
+    def _tube_ind_for_artifact(self, artifact):
+        well = self._find_well(artifact)
+        return self.tube_racks.index(well.container)
+
+    def _exists_since_before(self, artifact):
+        return self._find_well(artifact) is not None
 
     def _convert_to_coordinates(self, position_index):
         rowind = position_index % self.size.height
@@ -667,7 +714,8 @@ class DilutionSettings:
 
     def __init__(self, scale_up_low_volumes=False, concentration_ref=None, include_blanks=False,
                  volume_calc_method=None, make_pools=False, fixed_sample_volume=None,
-                 fixed_buffer_volume=None, sort_strategy=None):
+                 fixed_buffer_volume=None, robotfile_sort_strategy=None,
+                 tube_placement_sort_strategy=None):
         """
         :param dilution_waste_volume: Extra volume that should be subtracted from the sample volume
         to account for waste during dilution
@@ -686,10 +734,11 @@ class DilutionSettings:
         self.include_control = True
         self.fixed_sample_volume = fixed_sample_volume
         self.fixed_buffer_volume = fixed_buffer_volume
-        if sort_strategy is None:
+        if robotfile_sort_strategy is None:
             strategy_bag = SortStrategy()
-            sort_strategy = strategy_bag.input_position_sort_key
-        self.sort_strategy = sort_strategy
+            robotfile_sort_strategy = strategy_bag.input_position_sort_key
+        self.robotfile_sort_strategy = robotfile_sort_strategy
+        self.tube_placement_sort_strategy = tube_placement_sort_strategy
 
         # NOTE: This is part of a quick-fix (used in one particular corner case)
         self.is_pooled = False
@@ -722,7 +771,7 @@ class RobotSettings(object):
         self.dilution_waste_volume = None
         self.pipette_min_volume = None
         self.pipette_max_volume = None
-        self.max_pipette_vol_for_row_split = None
+        self.max_destination_volume = None
 
     def include_transfer_in_output(self, transfer):
         return True
