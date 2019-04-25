@@ -673,7 +673,7 @@ class TubeRackPositioner:
         name = '{}{}'.format(self.name_prefix, self.tube_rack_id_counter + 1)
         self.tube_rack_id_counter += 1
         tube_rack = Container(size=PlateSize(height=4, width=6),
-                              container_type=Container.CONTAINER_TYPE_96_WELLS_PLATE,
+                              container_type=Container.CONTAINER_TYPE_TUBERACK,
                               container_id=id, name=name, is_source=False)
         self.tube_racks.append(tube_rack)
 

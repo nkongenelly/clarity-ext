@@ -105,6 +105,7 @@ class Container(DomainObjectWithUdfMixin):
 
     CONTAINER_TYPE_96_WELLS_PLATE = "96 well plate"
     CONTAINER_TYPE_TUBE = "Tube"
+    CONTAINER_TYPE_TUBERACK = "Tuberack"
 
     def __init__(self, mapping=None, size=None, container_type=None,
                  container_id=None, name=None, is_source=None, append_order=DOWN_FIRST, sort_weight=0, udf_map=None):
