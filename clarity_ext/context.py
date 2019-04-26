@@ -180,6 +180,18 @@ class ExtensionContext(object):
         """
         return utils.single(self.artifact_service.all_input_containers())
 
+    def initialize_logger(self):
+        """
+        The step must have added files for 'Warnings' and 'Errors' at Step log file handle
+        """
+        warning_step_log = StepLoggerService('Step log', self.file_service, extension='txt',
+                                             filename='Warnings', raise_if_not_found=True)
+        self.validation_service.add_separate_warning_step_log(warning_step_log)
+        errors_step_log = StepLoggerService('Step log', self.file_service, extension='txt',
+                                            filename='Errors', raise_if_not_found=True)
+        self.validation_service.add_separate_error_step_log(errors_step_log)
+
+
     def local_shared_file(self, clarity_file_handle, mode="r", is_xml=False, is_csv=False, file_name_contains=None):
         """
         Downloads the file from the current step. The returned file is generally a regular

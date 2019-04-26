@@ -21,12 +21,18 @@ class Analyte(Aliquot):
                                              udf_map=udf_map)
         self.is_control = is_control
         self.is_output_from_previous = is_from_original
+        self.reagent_labels = None
+        if api_resource is not None:
+            self.reagent_labels = api_resource.reagent_labels
 
     def __repr__(self):
         typename = type(self).__name__
         if self.is_input is not None:
             typename = ("Input" if self.is_input else "Output") + typename
         return "{}<{} ({})>".format(typename, self.name, self.id)
+
+    def get_reagent_label(self):
+        return utils.single(self.reagent_labels)
 
     def sample(self):
         """
