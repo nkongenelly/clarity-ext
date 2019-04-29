@@ -607,11 +607,12 @@ class TubeRackPositioner:
     """
     TUBE_RACK_START_ID = 1211111111
 
-    def __init__(self, plate_size):
+    def __init__(self, name_prefix, plate_size):
         self.tube_racks = list()
         self.tube_rack_id_counter = 0
         self.tube_counter = 1
         self.size = plate_size
+        self.name_prefix = name_prefix
         self.number_of_wells = self.size.height * self.size.width
         self.current_well_pos = None
         self.current_tube_ind = -1
@@ -669,10 +670,10 @@ class TubeRackPositioner:
     def _create_new_tube_rack(self):
         id = self.TUBE_RACK_START_ID + self.tube_rack_id_counter
         id = str(id)
-        name = 'Tuberack{}'.format(self.tube_rack_id_counter + 1)
+        name = '{}{}'.format(self.name_prefix, self.tube_rack_id_counter + 1)
         self.tube_rack_id_counter += 1
         tube_rack = Container(size=PlateSize(height=4, width=6),
-                              container_type=Container.CONTAINER_TYPE_96_WELLS_PLATE,
+                              container_type=Container.CONTAINER_TYPE_TUBERACK,
                               container_id=id, name=name, is_source=False)
         self.tube_racks.append(tube_rack)
 
