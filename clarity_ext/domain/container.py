@@ -65,6 +65,8 @@ class ContainerPosition(namedtuple("ContainerPosition", ["row", "col"])):
             (<row>, <col>) where both are integers
             (<row>, <col>) where column is a string (e.g. A)
         """
+        if not repr:
+            return None
         if isinstance(repr, basestring):
             row, col = repr.split(":")
             if row.isalpha():
