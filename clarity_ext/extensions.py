@@ -14,6 +14,8 @@ from clarity_ext import ClaritySession
 from clarity_ext.repository import StepRepository
 from clarity_ext.service import ArtifactService, FileService
 from clarity_ext.utility.integration_test_service import IntegrationTest
+from clarity_ext.service.dilution.index_generation import ConfigValidator
+from clarity_ext.service.dilution.index_generation import ConfigParser
 from jinja2 import Template
 import time
 import random
@@ -580,6 +582,70 @@ class DriverFileExtension(GeneralExtension):
 
     def file_prefix(self):
         return FileService.FILE_PREFIX_ARTIFACT_ID
+
+
+class IndexFileExtension(GeneralExtension):
+    def execute(self):
+        input_analytes = self.context.artifact_service.all_input_analytes()
+        self.context.initialize_logger()
+        expected_sample_name, sample_candidates, validator = \
+            self._prepare_validation(input_analytes)
+        validator.validate(expected_sample_name, sample_candidates, input_analytes)
+        from utils import single
+        sample = single(sample_candidates)
+        files = list()
+        config_parser = ConfigParser(sample)
+        file_generator = self.get_file_generator(
+            self.context.current_user.initials, self.context.pid,
+            sample.udf_indexconfig_short_name)
+        for robot_settings in self.get_robot_settings():
+            index_pos_dict = config_parser.index_mapping_dict(robot_settings)
+            sorted_analytes = sorted(input_analytes, key=self._target_pos_sort_key)
+            source_dimensions = config_parser.source_dimensions(robot_settings)
+            csv = file_generator.generate_csv(robot_settings, sorted_analytes,
+                                              index_pos_dict=index_pos_dict,
+                                              source_dim=source_dimensions)
+            files.append((csv.file_name, csv.to_string(include_header=False)))
+
+        self.upload_files(files=files)
+
+    @abstractmethod
+    def upload_files(self, files):
+        pass
+
+    @abstractmethod
+    def get_file_generator(self, user_initials, pid, short_category):
+        pass
+
+    def _prepare_validation(self, input_analytes):
+        from clarity_ext.mappers.clarity_mapper import ClarityMapper
+        from clarity_ext.repository.reagent_type_repository import ReagentTypeRepository
+        """ factory method"""
+        label = input_analytes[0].get_reagent_label()
+        reagent_repo = ReagentTypeRepository(session=self.context.session)
+        reagent_type = reagent_repo.get_reagent_type(label=label)
+        expected_sample_name = self._get_sample_name(reagent_type.category)
+        sample_resources = self.context.session.api.get_samples(name=expected_sample_name)
+        mapper = ClarityMapper()
+        sample_candidates = [mapper.sample_create_object(sample_resource)
+                             for sample_resource in sample_resources]
+        robot_list = list(self.get_robot_settings())
+        validator = ConfigValidator(self.context.validation_service,
+                                    robot_list,
+                                    reagent_type.category)
+        return expected_sample_name, sample_candidates, validator
+
+    def _get_sample_name(self, category):
+        adjusted_name = category.replace(' ', '_')
+        adjusted_name = re.sub('\W+', '', adjusted_name)
+        return 'IndexConfig_{}'.format(adjusted_name)
+
+    def _target_pos_sort_key(self, analyte):
+        return analyte.well.index_down_first
+
+    @abstractmethod
+    def get_robot_settings(self):
+        pass
 
 
 class SampleSheetExtension(GeneralExtension):
