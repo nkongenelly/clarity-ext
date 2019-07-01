@@ -14,6 +14,7 @@ class SharedResultFile(Artifact):
         # TODO: These files are currently represented with api resources, not internal
         # domain objects
         self.files = files or list()
+        self.output_type = Artifact.OUTPUT_TYPE_SHARED_RESULT_FILE
 
     def remove_files(self, disabled, logger, session):
         self._unlink_files_from_artifact(disabled, logger, session)

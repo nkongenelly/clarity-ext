@@ -100,16 +100,6 @@ class StepRepository(object):
             raise NotImplementedError(
                 "Generation type {} is not implemented".format(output_gen_type))
 
-        if isinstance(output, ResultFile):
-            output.output_type = Artifact.OUTPUT_TYPE_RESULT_FILE
-        elif isinstance(output, Analyte):
-            output.output_type = Artifact.OUTPUT_TYPE_ANALYTE
-        elif isinstance(output, SharedResultFile):
-            output.output_type = Artifact.OUTPUT_TYPE_SHARED_RESULT_FILE
-        else:
-            raise NotImplementedError(
-                "Output type {} is not implemented".format(output.__class__.__name__))
-
         # Add a reference to the other object for convenience:
         input.output = output
         output.input = input

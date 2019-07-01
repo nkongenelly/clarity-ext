@@ -1,4 +1,5 @@
 from clarity_ext.domain.aliquot import Aliquot, Sample
+from clarity_ext.domain.artifact import Artifact
 from clarity_ext import utils
 from clarity_ext.domain.udf import UdfMapping
 
@@ -22,6 +23,7 @@ class Analyte(Aliquot):
         self.is_control = is_control
         self.is_output_from_previous = is_from_original
         self.reagent_labels = None
+        self.output_type = Artifact.OUTPUT_TYPE_ANALYTE
         if api_resource is not None:
             self.reagent_labels = api_resource.reagent_labels
 
