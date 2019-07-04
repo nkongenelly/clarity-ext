@@ -23,7 +23,6 @@ class Analyte(Aliquot):
         self.is_control = is_control
         self.is_output_from_previous = is_from_original
         self.reagent_labels = None
-        self.output_type = Artifact.OUTPUT_TYPE_ANALYTE
         if api_resource is not None:
             self.reagent_labels = api_resource.reagent_labels
 
@@ -32,6 +31,9 @@ class Analyte(Aliquot):
         if self.is_input is not None:
             typename = ("Input" if self.is_input else "Output") + typename
         return "{}<{} ({})>".format(typename, self.name, self.id)
+
+    def _set_output_type(self):
+        self.output_type = Artifact.OUTPUT_TYPE_ANALYTE
 
     def get_reagent_label(self):
         return utils.single(self.reagent_labels)

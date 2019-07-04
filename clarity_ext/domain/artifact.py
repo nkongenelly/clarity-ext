@@ -14,15 +14,21 @@ class Artifact(DomainObjectWithUdfMixin):
     OUTPUT_TYPE_ANALYTE = 2
     OUTPUT_TYPE_SHARED_RESULT_FILE = 3
 
-    def __init__(self, api_resource=None, artifact_id=None, name=None, udf_map=None):
+    def __init__(self, api_resource=None, artifact_id=None, name=None, udf_map=None, is_input=None):
         super(Artifact, self).__init__(api_resource=api_resource, id=artifact_id, udf_map=udf_map)
-        self.is_input = None  # Set to true if this is an input artifact
+        self.is_input = is_input
         self.generation_type = None  # Set to PER_INPUT or PER_ALL_INPUTS if applicable
         self._name = name
         self.view_name = name
 
         # NOTE: This is currently only used in tests, so you can't trust that it has been set
         self.pairings = list()
+        self.output_type = None
+        if not is_input:
+            self._set_output_type()
+
+    def _set_output_type(self):
+        raise NotImplementedError('Output type {} is not implemented'.format(self.__class__.__name__))
 
     @property
     def name(self):

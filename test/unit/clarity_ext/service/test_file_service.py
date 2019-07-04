@@ -1,6 +1,6 @@
 import unittest
 from mock import MagicMock
-from clarity_ext.domain.artifact import Artifact
+from clarity_ext.domain.analyte import Analyte
 from clarity_ext.service.file_service import FileService
 
 
@@ -23,7 +23,7 @@ class TestUploadFileService(unittest.TestCase):
 
 
 def fake_artifact(artifact_id, name):
-    artifact = Artifact()
+    artifact = Analyte(api_resource=None, is_input=False)
     artifact.name = name
     artifact.id = artifact_id
     return artifact
