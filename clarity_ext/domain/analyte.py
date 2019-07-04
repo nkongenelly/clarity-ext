@@ -1,4 +1,5 @@
 from clarity_ext.domain.aliquot import Aliquot, Sample
+from clarity_ext.domain.artifact import Artifact
 from clarity_ext import utils
 from clarity_ext.domain.udf import UdfMapping
 
@@ -30,6 +31,9 @@ class Analyte(Aliquot):
         if self.is_input is not None:
             typename = ("Input" if self.is_input else "Output") + typename
         return "{}<{} ({})>".format(typename, self.name, self.id)
+
+    def _set_output_type(self):
+        self.output_type = Artifact.OUTPUT_TYPE_ANALYTE
 
     def get_reagent_label(self):
         return utils.single(self.reagent_labels)

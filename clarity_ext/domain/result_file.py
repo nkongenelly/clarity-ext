@@ -1,4 +1,5 @@
 from clarity_ext.domain.aliquot import Aliquot, Sample
+from clarity_ext.domain.artifact import Artifact
 from clarity_ext import utils
 from clarity_ext.domain.udf import UdfMapping
 
@@ -20,6 +21,9 @@ class ResultFile(Aliquot):
         super(self.__class__, self).__init__(api_resource, is_input=is_input, id=id,
                 samples=samples, name=name, well=well, udf_map=udf_map)
         self.is_control = False
+
+    def _set_output_type(self):
+        self.output_type = Artifact.OUTPUT_TYPE_RESULT_FILE
 
     @property
     def sample(self):

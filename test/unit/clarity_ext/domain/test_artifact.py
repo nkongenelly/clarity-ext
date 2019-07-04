@@ -15,16 +15,15 @@ from clarity_ext.mappers.clarity_mapper import ClarityMapper
 class TestArtifact(unittest.TestCase):
     def test_two_identical_artifacts_equal(self):
         """A copy of an artifact should be equal to another"""
-        artifacts = [Artifact(), Artifact()]
+        artifacts = [ResultFile(api_resource=None, is_input=False),
+                     ResultFile(api_resource=None, is_input=False)]
         for artifact in artifacts:
-            artifact.generation_type = Artifact.OUTPUT_TYPE_RESULT_FILE
-            artifact.is_input = False
             artifact.any_patch = "13370"
 
         self.assertEqual(artifacts[0], artifacts[1])
 
     def test_artifact_should_not_equal_non_artifact(self):
-        artifact = Artifact()
+        artifact = ResultFile(api_resource=None, is_input=False)
         self.assertNotEqual(artifact, "string")
 
     def test_equality_including_mutual_references(self):

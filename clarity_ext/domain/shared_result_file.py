@@ -15,6 +15,9 @@ class SharedResultFile(Artifact):
         # domain objects
         self.files = files or list()
 
+    def _set_output_type(self):
+        self.output_type = Artifact.OUTPUT_TYPE_SHARED_RESULT_FILE
+
     def remove_files(self, disabled, logger, session):
         self._unlink_files_from_artifact(disabled, logger, session)
         self.files = list()
