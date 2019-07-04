@@ -1,8 +1,10 @@
 from mock import MagicMock
 from StringIO import StringIO
 from io import BytesIO
+from mock import create_autospec
 from clarity_ext.service.file_service import Csv
 from clarity_ext.service.file_service import FileService
+from clarity_ext.service.file_service import OSService
 from clarity_ext.service.process_service import ProcessService
 from clarity_ext.context import ExtensionContext
 from clarity_ext.service.artifact_service import ArtifactService
@@ -32,18 +34,18 @@ class ContextBuilder:
         self.context.local_shared_file = monkey.local_shared_file
 
     def _create(self):
-        session = MagicMock()
-        file_repository = MagicMock()
-        artifact_service = ArtifactService(self.step_repo)
-        os_service = MagicMock()
+        session = None
+        clarity_service = None
+        file_repository = None
         current_user = None
+        validation_service = None
+        dilution_service = None
+        os_service = OSService()
+        process_service = ProcessService()
+        artifact_service = ArtifactService(self.step_repo)
         file_service = FileService(
             artifact_service, file_repository, False,
             os_service, uploaded_to_stdout=False, disable_commits=True)
-        validation_service = MagicMock()
-        dilution_service = MagicMock()
-        process_service = ProcessService()
-        clarity_service = None
         self.context = ExtensionContext(session, artifact_service, file_service, current_user,
                                 self.logger, self.step_repo, clarity_service,
                                 dilution_service, process_service, validation_service,
