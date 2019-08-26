@@ -78,7 +78,7 @@ class ExtensionContext(object):
                                    uploaded_to_stdout=uploaded_to_stdout,
                                    disable_commits=disable_commits,
                                    session=session)
-        step_logger_service = StepLoggerService("Step log", file_service)
+        step_logger_service = StepLoggerService("Step log", file_service, write_to_stdout=test_mode)
         validation_service = ValidationService(step_logger_service)
         clarity_service = ClarityService(
             ClarityRepository(), step_repo, clarity_mapper)
