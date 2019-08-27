@@ -101,6 +101,11 @@ class StepRepository(object):
                 "Generation type {} is not implemented".format(output_gen_type))
 
         # Add a reference to the other object for convenience:
+        # TODO: There are generally several input pairs containing the same input
+        # artifact within the same step, where output is either shared result file, or
+        # analyte/resultfile. As a consequence, there are several instances of the same
+        # input artifact, with different values of .output. When populating containers, there
+        # is no check as of which one of these input artifacts are used!
         input.output = output
         output.input = input
 

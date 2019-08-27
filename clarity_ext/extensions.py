@@ -707,6 +707,19 @@ class TemplateExtension(DriverFileExtension):
         if len(candidates) > 1:
             raise ValueError("More than one template file found: ", ",".join(candidates))
         self.default_template_name = candidates[0] if len(candidates) == 1 else None
+        self.output_by_input_id = None
+
+    def build_artifact_dict(self):
+        output_by_input_id = dict()
+        pairs = self.context.artifact_service.all_aliquot_pairs()
+        for pair in pairs:
+            output_by_input_id[pair.input_artifact.id] = pair.output_artifact
+        self.output_by_input_id = output_by_input_id
+
+    def get_output(self, input_id):
+        if self.output_by_input_id is None:
+            self.build_artifact_dict()
+        return self.output_by_input_id[input_id]
 
     @property
     def template_path(self):
