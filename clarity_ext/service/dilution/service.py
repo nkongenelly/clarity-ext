@@ -6,6 +6,7 @@ from itertools import groupby
 from itertools import chain
 import collections
 from collections import namedtuple
+from abc import abstractmethod
 from clarity_ext.service.file_service import Csv
 from clarity_ext.domain.validation import ValidationException, ValidationType, ValidationResults, UsageError
 from clarity_ext import utils
@@ -1068,6 +1069,27 @@ class TransferBatchHandlerBase(TransferHandlerBase):
 
     def warning(self, msg, batch):
         batch.validation_results.append(ValidationException(msg, ValidationType.WARNING))
+
+
+class StrategyChoiceHandlerBase(TransferHandlerBase):
+
+    def __init__(self, dilution_session, dilution_settings, robot_settings, virtual_batch):
+        super(StrategyChoiceHandlerBase, self).__init__(
+            dilution_session, dilution_settings, robot_settings, virtual_batch)
+
+    @abstractmethod
+    def should_execute(self, transfer):
+        pass
+
+    @abstractmethod
+    def decide_strategy(self, transfer):
+        pass
+
+    def run(self, transfer_route_node):
+        if not self.should_execute(transfer_route_node.transfer):
+            return None
+        strategy = self.decide_strategy(transfer_route_node.transfer)
+        return strategy.run(transfer_route_node)
 
 
 class TransferSplitHandlerBase(TransferHandlerBase):
