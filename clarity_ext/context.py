@@ -9,6 +9,8 @@ from clarity_ext.repository import StepRepository
 from clarity_ext import utils
 from clarity_ext.service.file_service import OSService
 from clarity_ext.mappers.clarity_mapper import ClarityMapper
+from clarity_ext.domain.validation import ValidationException
+from clarity_ext.domain.validation import ValidationType
 
 
 class ExtensionContext(object):
@@ -60,6 +62,7 @@ class ExtensionContext(object):
         self.validation_service = validation_service
         self.disable_commits = disable_commits
         self._calls_to_commit = 0
+        self.validation_results = list()
 
     @staticmethod
     def create(step_id, test_mode=False, uploaded_to_stdout=False, disable_commits=False):
@@ -191,6 +194,19 @@ class ExtensionContext(object):
                                             filename='Errors', raise_if_not_found=True)
         self.validation_service.add_separate_error_step_log(errors_step_log)
 
+    def stage_error(self, msg):
+        msg = '{} {}'.format(ValidationType.ERROR, msg)
+        e = ValidationException(msg, ValidationType.ERROR)
+        self.validation_results.append(e)
+
+    def stage_warning(self, msg):
+        msg = '{} {}'.format(ValidationType.WARNING, msg)
+        e = ValidationException(msg, ValidationType.WARNING)
+        self.validation_results.append(e)
+
+    def handle_validation(self, msg=None):
+        self.validation_service.handle_validation(
+            self.validation_results, tailored_error_message=msg)
 
     def local_shared_file(self, clarity_file_handle, mode="r", is_xml=False, is_csv=False, file_name_contains=None):
         """
