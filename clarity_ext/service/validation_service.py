@@ -18,7 +18,7 @@ class ValidationService:
     def add_separate_error_step_log(self, step_logger_service):
         self.step_logger_service.errors_step_logger_service = step_logger_service
 
-    def handle_validation(self, results):
+    def handle_validation(self, results, tailored_error_message=None):
         """
         Pushes validation results to the logging framework
         """
@@ -29,7 +29,9 @@ class ValidationService:
                 self.handle_single_validation(result)
         # If any of the validation results were errors, raise an exception:
         if any(result for result in results if result.type == ValidationType.ERROR):
-            raise UsageError("Errors during validation. See the step log for further details.", results)
+            msg = tailored_error_message if tailored_error_message is not None \
+                else "Errors during validation. See the step log for further details."
+            raise UsageError(msg, results)
 
     def handle_single_validation(self, result):
         msg_row = "{}".format(result)
