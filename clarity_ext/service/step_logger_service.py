@@ -5,7 +5,7 @@ from clarity_ext.service.file_service import SharedFileNotFound
 from clarity_ext.utils import lazyprop
 
 
-class StepLoggerService:
+class StepLoggerService(object):
     """
     Provides support for logging to shared files in a step.
     """
@@ -23,6 +23,7 @@ class StepLoggerService:
         self.append = append
         self.extension = extension
         self.write_to_stdout = write_to_stdout
+        self.staged_messages = list()
 
         # Use Windows line endings for now, since most clients are currently Windows.
         # TODO: This should be configurable.
@@ -76,6 +77,14 @@ class StepLoggerService:
     def log(self, msg):
         # Logs without forwarding to the core logger, and without any formatting
         self._log(None, msg)
+
+    def stage_log(self, msg):
+        # In order to be able to rinse out duplicate log messages
+        self.staged_messages.append(msg)
+
+    def write_staged(self):
+        for msg in set(self.staged_messages):
+            self._log(None, msg)
 
     def get(self, name):
         # This factory method is added for readability in the extensions.
