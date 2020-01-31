@@ -73,6 +73,7 @@ class DilutionSession(object):
         self.transfer_batches_by_robot = dict()
         for robot_settings in self.robot_settings_by_name.values():
             self.transfer_batches_by_robot[robot_settings.name] = self.create_batches(self.pairs, robot_settings)
+        self.context.logger.write_staged()
 
     def init_handlers(self, transfer_handler_types, batch_handler_types,
                       dilution_settings, robot_settings, virtual_batch):
