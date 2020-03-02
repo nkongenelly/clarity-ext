@@ -715,14 +715,19 @@ class DilutionSettings:
         CONCENTRATION_REF_NM: "nM"
     }
 
+    # TODO: remove scale_up_low_volume, it's obsolete here
     def __init__(self, scale_up_low_volumes=False, concentration_ref=None, include_blanks=False,
                  volume_calc_method=None, make_pools=False, fixed_sample_volume=None,
                  fixed_buffer_volume=None, robotfile_sort_strategy=None,
-                 tube_placement_sort_strategy=None):
+                 tube_placement_sort_strategy=None,
+                 ensure_min_volume_for_two_dilutions_in_row=False):
         """
-        :param dilution_waste_volume: Extra volume that should be subtracted from the sample volume
-        to account for waste during dilution
+        param: ensure_min_volume_for_two_dilutions_in_row:
+        In cases where the next step is another dilution, ensure that there is at least
+        (pipette min volume + waste volume) in the target container.
+        This setting affect evaporations and fixed volume transfer only.
         """
+        self.ensure_min_volume_for_two_dilutions_in_row = ensure_min_volume_for_two_dilutions_in_row
         self.scale_up_low_volumes = scale_up_low_volumes
         # TODO: Use py3 enums instead
         if concentration_ref is not None:
