@@ -189,6 +189,8 @@ class DilutionSession(object):
             for batch in transfer_batches:
                 batch_handler.handle_batch(batch)
 
+            batch_handler.handle_accumulated_results()
+
         # Push all validation results over to the validation_service
         for batch in transfer_batches:
             self.validation_service.handle_validation(batch.validation_results)
@@ -1068,6 +1070,9 @@ class TransferHandlerBase(object):
 
 class TransferBatchHandlerBase(TransferHandlerBase):
     def handle_batch(self, batch):
+        pass
+
+    def handle_accumulated_results(self):
         pass
 
     def error(self, msg, batch):
