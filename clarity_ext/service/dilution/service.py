@@ -406,6 +406,11 @@ class SingleTransfer(object):
         return self.virtual_batch[self]
 
     @property
+    def is_last_transfer(self):
+        """If this transfer represent the last action against the target"""
+        return self.batch == 'default' or self.batch == 'evaporate2'
+
+    @property
     def pipette_total_volume(self):
         return self.pipette_buffer_volume + self.pipette_sample_volume
 
