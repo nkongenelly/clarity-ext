@@ -411,6 +411,10 @@ class SingleTransfer(object):
         return self.batch == 'default' or self.batch == 'evaporate2'
 
     @property
+    def should_evaporate(self):
+        return float(self.target_conc) > float(self.source_conc)
+
+    @property
     def pipette_total_volume(self):
         return self.pipette_buffer_volume + self.pipette_sample_volume
 
