@@ -99,7 +99,7 @@ class ExtensionService(object):
         for run_arguments in run_arguments_list:
             pid = run_arguments["pid"]
             path = self._get_run_path(pid, module, self.RUN_MODE_EXEC, config)
-            self._run(path, pid, module, False, False)
+            self._run(config, path, pid, module, False, False)
 
     def run_test(self, config, run_arguments_list, module, artifacts_to_stdout, use_cache, validate_against_frozen):
         self.msg("To execute from Clarity:")
@@ -134,7 +134,7 @@ class ExtensionService(object):
                 self._prepare_fresh_test(path)
 
             with utils.add_log_file_handler(os.path.join(path, "extensions.log"), False, ExtensionTestLogFilter()):
-                self._run(path, pid, module, artifacts_to_stdout, disable_context_commit=not commit, test_mode=True)
+                self._run(config, path, pid, module, artifacts_to_stdout, disable_context_commit=not commit, test_mode=True)
 
             if validate_against_frozen:
                 try:
@@ -245,7 +245,7 @@ class ExtensionService(object):
         module_obj = importlib.import_module(module)
         return getattr(module_obj, "Extension")
 
-    def _run(self, path, pid, module, artifacts_to_stdout, disable_context_commit=False, test_mode=False):
+    def _run(self, config, path, pid, module, artifacts_to_stdout, disable_context_commit=False, test_mode=False):
         path = os.path.abspath(path)
         self.logger.info("Running extension {module} for pid={pid}, test_mode={test_mode}".format(
             module=module, pid=pid, test_mode=test_mode))
@@ -258,6 +258,8 @@ class ExtensionService(object):
                                           disable_commits=disable_context_commit,
                                           uploaded_to_stdout=artifacts_to_stdout)
         instance = extension(context)
+        # We add the config in this way (not via __init__) as a quick fix.
+        instance.config = config
         try:
             if issubclass(extension, DriverFileExtension):
                 context.file_service.upload(instance.shared_file(), instance.filename(), instance.to_string(),
