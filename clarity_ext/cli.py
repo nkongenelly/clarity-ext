@@ -28,10 +28,36 @@ def main(level):
     global logger
     global log_level
     log_level = level
+    config = load_config()
 
-    if os.path.exists("clarity-ext.config"):
-        with open("clarity-ext.config", "r") as f:
-            config = yaml.load(f)
+
+def load_config():
+    """
+    Searches for a config file named 'clarity-ext.config' in the following order:
+    * the current directory
+    * ~/.config/clarity-ext/
+    * /etc/clarity-ext/
+
+    Returns a default config if none is found
+    """
+    config = dict()
+    search_path = [".", os.path.expanduser("~/.config/clarity-ext/"), "/etc/clarity-ext/"]
+
+    for root in search_path:
+        fpath = os.path.join(root, "clarity-ext.config")
+        if os.path.exists(fpath):
+            with open(fpath, "r") as f:
+                config = yaml.load(f)
+
+    # Add default values required for execution:
+    if "test_root_path" not in config:
+        config["test_root_path"] = "./clarity_ext_scripts/int_tests",
+    if "frozen_root_path" not in config:
+        config["frozen_root_path"] = "./clarity_ext_scripts/int_tests",
+    if "exec_root_path" not in config:
+        config["exec_root_path"] = "."
+
+    return config
 
 
 def default_logging():
@@ -75,13 +101,6 @@ def extension(module, mode, args, cache):
     global config
     default_logging()
     try:
-        if not config:
-            config = {
-                "test_root_path": "./clarity_ext_scripts/int_tests",
-                "frozen_root_path": "./clarity_ext_scripts/int_tests",
-                "exec_root_path": "."
-            }
-            logger.debug("Configuration not provided, using default: {}".format(config))
 
         # Parse the run arguments list:
         if args and isinstance(args, basestring):
