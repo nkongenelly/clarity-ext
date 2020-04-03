@@ -47,13 +47,13 @@ def load_config():
         fpath = os.path.join(root, "clarity-ext.config")
         if os.path.exists(fpath):
             with open(fpath, "r") as f:
-                config = yaml.load(f)
+                config = yaml.safe_load(f)
 
     # Add default values required for execution:
     if "test_root_path" not in config:
-        config["test_root_path"] = "./clarity_ext_scripts/int_tests",
+        config["test_root_path"] = "./clarity_ext_scripts/int_tests"
     if "frozen_root_path" not in config:
-        config["frozen_root_path"] = "./clarity_ext_scripts/int_tests",
+        config["frozen_root_path"] = "./clarity_ext_scripts/int_tests"
     if "exec_root_path" not in config:
         config["exec_root_path"] = "."
 
