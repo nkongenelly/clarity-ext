@@ -54,6 +54,7 @@ class ClarityMapper(object):
                         project,
                         udf_map,
                         mapper=self)
+        sample.api_resource = resource
         self._after_object_created(sample, resource)
         return sample
 
