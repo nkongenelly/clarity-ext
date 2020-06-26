@@ -69,12 +69,12 @@ class ClarityService(object):
                 self.logger.info("Updating name of {} from {} to {}".format(domain_object,
                                                                             api_resource.name, domain_object.name))
                 api_resource.name = domain_object.name
-                # Update UDFs. TODO: Clean this up and do it the same way for all resources
-                for udf in domain_object.udf_map.values:
-                    if udf.key not in api_resource.udf or api_resource.udf[udf.key] != udf.value:
-                        api_resource.udf[udf.key] = udf.value
-                if not ignore_commit:
-                    self.clarity_repository.update(api_resource)
+            # Update UDFs. TODO: Clean this up and do it the same way for all resources
+            for udf in domain_object.udf_map.values:
+                if udf.key not in api_resource.udf or api_resource.udf[udf.key] != udf.value:
+                    api_resource.udf[udf.key] = udf.value
+            if not ignore_commit:
+                self.clarity_repository.update(api_resource)
         elif isinstance(domain_object, Sample):
             # TODO: Update in a consistent way. LIMS-1057
             api_resource = self.clarity_mapper.create_resource(domain_object)
