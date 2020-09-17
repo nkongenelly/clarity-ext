@@ -107,6 +107,14 @@ class FileService:
         self.os_service.copy_file(downloaded_path, upload_path)
         return upload_path
 
+    def upload_file_name(self, filename):
+        # Before uploading, each file name is updated with the artifact id as prefix
+        # This is the convention build into clarity, making it recognize
+        # a file to be uploaded
+        return "{}_{}".format(
+            self.artifactid_by_filename[filename], filename
+        )
+
     def remove_files(self, file_handle, disabled, exclude_list=None):
         """Removes all files for the particular file handle.
 
