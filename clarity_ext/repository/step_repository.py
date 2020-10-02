@@ -26,7 +26,6 @@ class StepRepository(object):
         self.session = session
         self.clarity_mapper = clarity_mapper
 
-
     def all_artifacts(self):
         """
         Fetches all artifacts from the input output map, wraps them in to a domain object.
@@ -49,6 +48,7 @@ class StepRepository(object):
         for input, output in input_output_maps:
             artifact_keys.add(input["uri"])
             artifact_keys.add(output["uri"])
+
         artifacts = self.session.api.get_batch(artifact_keys)
         artifacts_by_uri = {artifact.uri: artifact for artifact in artifacts}
         for input, output in input_output_maps:
@@ -70,7 +70,7 @@ class StepRepository(object):
         for input_res, output_res in input_output_maps:
             input, output = self._wrap_input_output(
                 input_res, output_res, container_repo, process_type)
-            # Check if we already have an output with this id, and use that instead in that case:
+
             if output.id in outputs_by_id:
                 output = outputs_by_id[output.id]
             ret.append((input, output))
@@ -88,9 +88,18 @@ class StepRepository(object):
         output_resource = output_info["uri"]
         output_gen_type = output_info["output-generation-type"]
         input = self._wrap_artifact(
-            input_resource, container_repo, gen_type="Input", is_input=True, process_type=process_type)
-        output = self._wrap_artifact(output_resource, container_repo,
-                                     gen_type=output_gen_type, is_input=False, process_type=process_type)
+            input_resource,
+            container_repo,
+            gen_type="Input",
+            is_input=True,
+            process_type=process_type)
+
+        output = self._wrap_artifact(
+            output_resource,
+            container_repo,
+            gen_type=output_gen_type,
+            is_input=False,
+            process_type=process_type)
 
         if output_gen_type == "PerInput":
             output.generation_type = Artifact.PER_INPUT
@@ -116,6 +125,7 @@ class StepRepository(object):
         Wraps an artifact in a domain object, if one exists. The domain objects provide logic
         convenient methods for working with the domain object in extensions.
         """
+
         if artifact.type == "Analyte":
             wrapped = self.clarity_mapper.analyte_create_object(
                 artifact, is_input, container_repo, process_type)
@@ -123,7 +133,8 @@ class StepRepository(object):
             wrapped = self.clarity_mapper.result_file_create_object(
                 artifact, is_input, container_repo, process_type)
         elif artifact.type == "ResultFile" and gen_type == "PerAllInputs":
-            wrapped = SharedResultFile.create_from_rest_resource(artifact, process_type)
+            wrapped = SharedResultFile.create_from_rest_resource(
+                artifact, process_type)
         else:
             raise Exception("Unknown type and gen_type combination {}, {}".format(
                 artifact.type, gen_type))
