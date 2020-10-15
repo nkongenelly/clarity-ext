@@ -39,6 +39,10 @@ class Aliquot(Artifact):
             self._samples_require_initializing = False
         return self._samples
 
+    @samples.setter
+    def samples(self, value):
+        self._samples = value
+
     @property
     def is_pool(self):
         if self._samples is None:
