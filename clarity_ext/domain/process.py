@@ -4,7 +4,7 @@ from clarity_ext.domain.udf import DomainObjectWithUdfMixin, UdfMapping
 class Process(DomainObjectWithUdfMixin):
     """Represents a Process (step)"""
 
-    def __init__(self, api_resource, process_id, technician, udf_map, ui_link, instrument):
+    def __init__(self, api_resource, process_id, technician, udf_map, ui_link, instrument=None):
         super(Process, self).__init__(api_resource, process_id, udf_map)
         self.technician = technician
         self.ui_link = ui_link
