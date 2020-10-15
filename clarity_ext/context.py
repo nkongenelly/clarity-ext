@@ -1,3 +1,4 @@
+from datetime import datetime
 from clarity_ext.service.dilution.service import DilutionService
 from clarity_ext import UnitConversion
 from clarity_ext.repository import ClarityRepository, FileRepository
@@ -63,6 +64,7 @@ class ExtensionContext(object):
         self.disable_commits = disable_commits
         self._calls_to_commit = 0
         self.validation_results = list()
+        self.start = datetime.now()
 
     @staticmethod
     def create(step_id, test_mode=False, uploaded_to_stdout=False, disable_commits=False):
@@ -84,7 +86,7 @@ class ExtensionContext(object):
         step_logger_service = StepLoggerService("Step log", file_service, write_to_stdout=test_mode)
         validation_service = ValidationService(step_logger_service)
         clarity_service = ClarityService(
-            ClarityRepository(), step_repo, clarity_mapper)
+            ClarityRepository(), step_repo, clarity_mapper, session=session)
         process_service = ProcessService()
         dilution_service = DilutionService(validation_service)
         return ExtensionContext(session, artifact_service, file_service, current_user,
@@ -150,6 +152,13 @@ class ExtensionContext(object):
     @lazyprop
     def all_analytes(self):
         return self.artifact_service.all_analyte_pairs()
+
+    @lazyprop
+    def containers(self):
+        """
+        Returns a tuple of (input, output) containers
+        """
+        return self.artifact_service.all_containers()
 
     @lazyprop
     def output_containers(self):
@@ -254,11 +263,12 @@ class ExtensionContext(object):
 
     def commit(self):
         """Commits all objects that have been added via the update method, using batch processing if possible"""
-        self._calls_to_commit += 1
-        if self._calls_to_commit > 1:
-            self.logger.warning("Commit called more than once. It's not necessary to call commit explicitly anymore.")
         self.clarity_service.update(self._update_queue, self.disable_commits)
         self.file_service.commit(self.disable_commits)
+
+        # Clear the update queue (the previous calls don't do that) in case we want to call
+        # commit again.
+        self._update_queue.clear()
 
     @lazyprop
     def current_process_type(self):
