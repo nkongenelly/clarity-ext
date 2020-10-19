@@ -156,6 +156,8 @@ class StepRepository(object):
         self.session.api.put_batch(artifacts)
 
     def current_user(self):
+        if not self.session.current_step:
+            return None
         current_user_resource = self.session.current_step.technician
         return User.create_from_rest_resource(current_user_resource)
 

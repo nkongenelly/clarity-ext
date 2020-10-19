@@ -19,6 +19,8 @@ class ClaritySession(object):
         if current_step_id:
             process_api_resource = genologics.entities.Process(self.api, id=current_step_id)
             self.current_step = Process.create_from_rest_resource(process_api_resource)
+        else:
+            self.current_step = None
 
     @staticmethod
     def create(current_step_id):
