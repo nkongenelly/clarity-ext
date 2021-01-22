@@ -259,6 +259,7 @@ class ExtensionService(object):
                                           uploaded_to_stdout=artifacts_to_stdout)
         instance = extension(context)
         # We add the config in this way (not via __init__) as a quick fix.
+        # Test
         instance.config = config
         try:
             if issubclass(extension, DriverFileExtension):
