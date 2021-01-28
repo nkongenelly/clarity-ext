@@ -26,4 +26,4 @@ class Extension(TemplateExtension):
 
     def integration_tests(self):
         # TODO: Add a valid step ID
-        yield "24-1234"
+        yield self.test("24-1234", commit=False)

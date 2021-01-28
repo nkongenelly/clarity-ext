@@ -258,6 +258,7 @@ class ExtensionService(object):
                                           disable_commits=disable_context_commit,
                                           uploaded_to_stdout=artifacts_to_stdout)
         instance = extension(context)
+        context.logger.log("Start running script '{}'".format(module))
         # We add the config in this way (not via __init__) as a quick fix.
         instance.config = config
         try:
@@ -268,6 +269,7 @@ class ExtensionService(object):
                 instance.execute()
             else:
                 raise NotImplementedError("Unknown extension type")
+            context.logger.log("Finished running script '{}'".format(module))
             context.commit()
         except UsageError as e:
             # Commit in order to upload step log
