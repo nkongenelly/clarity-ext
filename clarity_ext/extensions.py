@@ -260,7 +260,6 @@ class ExtensionService(object):
         instance = extension(context)
         context.logger.log("Start running script '{}'".format(module))
         # We add the config in this way (not via __init__) as a quick fix.
-        # Test
         instance.config = config
         try:
             if issubclass(extension, DriverFileExtension):
