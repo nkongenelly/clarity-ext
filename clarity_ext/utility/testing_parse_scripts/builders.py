@@ -19,11 +19,14 @@ from clarity_ext.utility.testing_parse_scripts.fake_artifact_factory import Fake
 
 class ContextBuilder:
     """
-    Add entities to repositories held by context
+    Handle repositories held by context
     E.g. shared files, artifacts, analytes.
     """
-    def __init__(self):
-        self.step_repo = FakeStepRepo()
+    def __init__(self, fake_step_repo_builder=None):
+        # Insert fake_step_repo_builder if there are step udfs
+        self.fake_step_repo_builder = fake_step_repo_builder or FakeStepRepoBuilder()
+        self.fake_step_repo_builder.create()
+        self.step_repo = self.fake_step_repo_builder.fake_step_repo
         self.logger = FakeLogger()
         self.file_repository = FakeFileRepository()
         self.os_service = FakeOsService()
@@ -95,6 +98,7 @@ class FakeStepRepo:
         self._shared_files = list()
         self._analytes = list()
         self.user = User("Integration", "Tester", "no-reply@medsci.uu.se", "IT")
+        self.process = Process(None, "24-1234", self.user, dict(), "http://not-avail")
 
     def all_artifacts(self):
         return self._shared_files + self._analytes
@@ -103,10 +107,30 @@ class FakeStepRepo:
         self._analytes.append((input, output))
 
     def get_process(self):
-        return Process(None, "24-1234", self.user, dict(), "http://not-avail")
+        return self.process
 
     def add_shared_result_file(self, f):
         self._shared_files.append((None, f))
+
+
+class FakeStepRepoBuilder:
+    def __init__(self):
+        self.fake_step_repo = None
+        self.process_udf_dict = dict()
+
+    def with_process_udf(self, lims_udf_name, udf_value):
+        self.process_udf_dict[lims_udf_name] = udf_value
+        if self.fake_step_repo is not None and self.fake_step_repo.process is not None:
+            udf_map = UdfMapping(self.process_udf_dict)
+            self.fake_step_repo.process.udf_map = udf_map
+
+    def create(self):
+        self.fake_step_repo = FakeStepRepo()
+        udf_map = UdfMapping(self.process_udf_dict)
+        self.fake_step_repo.process = Process(None, "24-1234",
+                                              self.fake_step_repo.user,
+                                              udf_map,
+                                              "http://not-avail")
 
 
 class LocalSharedFilePatcher:
