@@ -13,6 +13,7 @@ from clarity_ext.service.artifact_service import ArtifactService
 from clarity_ext.domain.process import Process
 from clarity_ext.domain.user import User
 from clarity_ext.domain.udf import UdfMapping
+from clarity_ext.domain.aliquot import Aliquot
 from clarity_ext.domain.shared_result_file import SharedResultFile
 from clarity_ext.utility.testing_parse_scripts.fake_artifact_factory import FakeArtifactFactory
 
@@ -75,16 +76,24 @@ class PairBuilder(object):
         self.target_id = None
         self.target_type = None
         self.pair = None
+        self.qc_flag = Aliquot.QC_FLAG_UNKNOWN
+        self.name = None
 
     def create(self):
         pair = self.artifact_repo.create_pair(
             pos_from=None, pos_to=None, source_id=None, target_id=self.target_id,
             target_type=self.target_type)
         pair.output_artifact.udf_map = UdfMapping(self.output_udf_dict)
+        pair.output_artifact.qc_flag = self.qc_flag
+        pair.output_artifact.name = self.name
+        pair.input_artifact.name = self.name
         self.pair = pair
 
     def with_target_id(self, target_id):
         self.target_id = target_id
+
+    def with_name(self, name):
+        self.name = name
 
     def with_output_udf(self, lims_udf_name, value):
         self.output_udf_dict[lims_udf_name] = value
