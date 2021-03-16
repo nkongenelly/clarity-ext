@@ -13,17 +13,21 @@ from clarity_ext.service.artifact_service import ArtifactService
 from clarity_ext.domain.process import Process
 from clarity_ext.domain.user import User
 from clarity_ext.domain.udf import UdfMapping
+from clarity_ext.domain.aliquot import Aliquot
 from clarity_ext.domain.shared_result_file import SharedResultFile
 from clarity_ext.utility.testing_parse_scripts.fake_artifact_factory import FakeArtifactFactory
 
 
 class ContextBuilder:
     """
-    Add entities to repositories held by context
+    Handle repositories held by context
     E.g. shared files, artifacts, analytes.
     """
-    def __init__(self):
-        self.step_repo = FakeStepRepo()
+    def __init__(self, fake_step_repo_builder=None):
+        # Insert fake_step_repo_builder if there are step udfs
+        self.fake_step_repo_builder = fake_step_repo_builder or FakeStepRepoBuilder()
+        self.fake_step_repo_builder.create()
+        self.step_repo = self.fake_step_repo_builder.fake_step_repo
         self.logger = FakeLogger()
         self.file_repository = FakeFileRepository()
         self.os_service = FakeOsService()
@@ -72,16 +76,24 @@ class PairBuilder(object):
         self.target_id = None
         self.target_type = None
         self.pair = None
+        self.qc_flag = Aliquot.QC_FLAG_UNKNOWN
+        self.name = None
 
     def create(self):
         pair = self.artifact_repo.create_pair(
             pos_from=None, pos_to=None, source_id=None, target_id=self.target_id,
             target_type=self.target_type)
         pair.output_artifact.udf_map = UdfMapping(self.output_udf_dict)
+        pair.output_artifact.qc_flag = self.qc_flag
+        pair.output_artifact.name = self.name
+        pair.input_artifact.name = self.name
         self.pair = pair
 
     def with_target_id(self, target_id):
         self.target_id = target_id
+
+    def with_name(self, name):
+        self.name = name
 
     def with_output_udf(self, lims_udf_name, value):
         self.output_udf_dict[lims_udf_name] = value
@@ -95,6 +107,7 @@ class FakeStepRepo:
         self._shared_files = list()
         self._analytes = list()
         self.user = User("Integration", "Tester", "no-reply@medsci.uu.se", "IT")
+        self.process = Process(None, "24-1234", self.user, dict(), "http://not-avail")
 
     def all_artifacts(self):
         return self._shared_files + self._analytes
@@ -103,10 +116,30 @@ class FakeStepRepo:
         self._analytes.append((input, output))
 
     def get_process(self):
-        return Process(None, "24-1234", self.user, dict(), "http://not-avail")
+        return self.process
 
     def add_shared_result_file(self, f):
         self._shared_files.append((None, f))
+
+
+class FakeStepRepoBuilder:
+    def __init__(self):
+        self.fake_step_repo = None
+        self.process_udf_dict = dict()
+
+    def with_process_udf(self, lims_udf_name, udf_value):
+        self.process_udf_dict[lims_udf_name] = udf_value
+        if self.fake_step_repo is not None and self.fake_step_repo.process is not None:
+            udf_map = UdfMapping(self.process_udf_dict)
+            self.fake_step_repo.process.udf_map = udf_map
+
+    def create(self):
+        self.fake_step_repo = FakeStepRepo()
+        udf_map = UdfMapping(self.process_udf_dict)
+        self.fake_step_repo.process = Process(None, "24-1234",
+                                              self.fake_step_repo.user,
+                                              udf_map,
+                                              "http://not-avail")
 
 
 class LocalSharedFilePatcher:

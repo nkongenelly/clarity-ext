@@ -176,6 +176,7 @@ class ClarityMapper(object):
                          samples=resource.samples,
                          name=resource.name,
                          well=well,
+                         qc_flag=resource.qc_flag,
                          udf_map=udf_map,
                          mapper=self)
         return ret
