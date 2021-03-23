@@ -1,6 +1,5 @@
+from collections import namedtuple
 from clarity_ext.domain.artifact import Artifact
-from clarity_ext.domain.analyte import Analyte
-from clarity_ext.domain.result_file import ResultFile
 from clarity_ext.domain.shared_result_file import SharedResultFile
 from clarity_ext.repository.container_repository import ContainerRepository
 from clarity_ext.domain.user import User
@@ -44,16 +43,7 @@ class StepRepository(object):
         instead.
         """
         input_output_maps = self.session.current_step.api_resource.input_output_maps
-        artifact_keys = set()
-        for input, output in input_output_maps:
-            artifact_keys.add(input["uri"])
-            artifact_keys.add(output["uri"])
-
-        artifacts = self.session.api.get_batch(artifact_keys)
-        artifacts_by_uri = {artifact.uri: artifact for artifact in artifacts}
-        for input, output in input_output_maps:
-            input['uri'] = artifacts_by_uri[input['uri'].uri]
-            output['uri'] = artifacts_by_uri[output['uri'].uri]
+        wrappable_pairs = WrappablePairs(self.session, input_output_maps, WrappablePairs.MODE_STATELESS)
 
         # Artifacts do not contain UDFs that have not been given a value. Since the domain objects returned
         # must know all UDFs available, we fetch them here:
@@ -67,9 +57,14 @@ class StepRepository(object):
         # that we create only one artifact domain object in this case:
         outputs_by_id = dict()
         container_repo = ContainerRepository()
-        for input_res, output_res in input_output_maps:
+        for genologics_input, genologics_output, output_generation_type in wrappable_pairs:
             input, output = self._wrap_input_output(
-                input_res, output_res, container_repo, process_type)
+                genologics_input,
+                genologics_output,
+                container_repo,
+                process_type,
+                output_generation_type
+            )
 
             if output.id in outputs_by_id:
                 output = outputs_by_id[output.id]
@@ -77,16 +72,14 @@ class StepRepository(object):
             outputs_by_id[output.id] = output
         return ret
 
-    def _wrap_input_output(self, input_info, output_info, container_repo, process_type):
+    def _wrap_input_output(self, input_resource, output_resource, container_repo,
+                           process_type, output_generation_type):
 
         # Create a map of all containers, so we can fill in it while building
         # domain objects.
 
         # Create a fresh container repository. Then we know that only one container
         # will be created for each object in a call to this method
-        input_resource = input_info["uri"]
-        output_resource = output_info["uri"]
-        output_gen_type = output_info["output-generation-type"]
         input = self._wrap_artifact(
             input_resource,
             container_repo,
@@ -97,17 +90,17 @@ class StepRepository(object):
         output = self._wrap_artifact(
             output_resource,
             container_repo,
-            gen_type=output_gen_type,
+            gen_type=output_generation_type,
             is_input=False,
             process_type=process_type)
 
-        if output_gen_type == "PerInput":
+        if output_generation_type == "PerInput":
             output.generation_type = Artifact.PER_INPUT
-        elif output_gen_type == "PerAllInputs":
+        elif output_generation_type == "PerAllInputs":
             output.generation_type = Artifact.PER_ALL_INPUTS
         else:
             raise NotImplementedError(
-                "Generation type {} is not implemented".format(output_gen_type))
+                "Generation type {} is not implemented".format(output_generation_type))
 
         # Add a reference to the other object for convenience:
         # TODO: There are generally several input pairs containing the same input
@@ -169,3 +162,118 @@ class StepRepository(object):
     def get_process(self):
         """Returns the currently running process (step)"""
         return self.session.current_step
+
+
+class WrappablePairs(object):
+    """
+    Contains all artifact pairs within a step, containing genologics Artifact instances
+    These are in turn ready to be wrapped into clarity-ext domain instances
+    Usage:
+    wrappable_pairs = WrappablePairs(session, input_output_maps, mode=<stateful | stateless>)
+    wrappable_pairs.validate()  # compares xml for stateful and stateless
+    for input, output, output_generation_type in wrappable_pairs:
+        input  # genologics Artifact, either stateful or stateless
+        output  # genologics Artifact
+
+    The validation compares the stateless and statefull xml representation,
+    and discards any discrepancies in the qc-flag
+    """
+
+    MODE_STATELESS = "stateless"
+    MODE_STATEFUL = "stateful"
+
+    def __init__(self, session, input_output_maps, state_mode):
+        self.session = session
+        self.input_output_maps = input_output_maps
+        self.state_mode = state_mode
+        self.pairs = list()
+        stateful_artifacts = self._fetch_stateful()
+        stateless_artifacts = self._fetch_stateless()
+        self.pairs = self._assemble_pairs(stateful_artifacts, stateless_artifacts)
+
+    def __iter__(self):
+        self.counter = 0
+        return self
+
+    def next(self):
+        return self.__next__()
+
+    def __next__(self):
+        if self.counter == len(self.pairs):
+            raise StopIteration
+        pair = self.pairs[self.counter]
+        self.counter += 1
+        return iter((pair.input_artifact, pair.output_artifact, pair.output_generation_type))
+
+    def _assemble_pairs(self, stateful_artifacts, stateless_artifacts):
+        pairs = list()
+        stateful_by_uri = {artifact.uri: artifact for artifact in stateful_artifacts}
+        stateless_by_lims_id = {artifact.id: artifact for artifact in stateless_artifacts}
+        for input, output in self.input_output_maps:
+            stateful_input = stateful_by_uri[input["uri"].uri]
+            fetched_input = ArtifactRepresentation(
+                stateful_representation=stateful_input,
+                stateless_representation=stateless_by_lims_id[stateful_input.id]
+            )
+            stateful_output = stateful_by_uri[output["uri"].uri]
+            fetched_output = ArtifactRepresentation(
+                stateful_representation=stateful_output,
+                stateless_representation=stateless_by_lims_id[stateful_output.id]
+            )
+            pair = Pair(
+                input=fetched_input,
+                output=fetched_output,
+                output_generation_type=output["output-generation-type"],
+                state_mode=self.state_mode
+            )
+            pairs.append(pair)
+
+        return pairs
+
+    def _fetch_stateful(self):
+        artifact_keys = set()
+        for input, output in self.input_output_maps:
+            artifact_keys.add(input["uri"])
+            artifact_keys.add(output["uri"])
+
+        return self.session.api.get_batch(artifact_keys)
+
+    def _fetch_stateless(self):
+        artifact_keys = set()
+        for input, output in self.input_output_maps:
+            stateless_input = input["uri"].get_stateless_clone()
+            stateless_output = output["uri"].get_stateless_clone()
+            artifact_keys.add(stateless_input)
+            artifact_keys.add(stateless_output)
+
+        return self.session.api.get_batch(artifact_keys)
+
+
+class Pair(namedtuple('Pair', ['input', 'output', 'output_generation_type', 'state_mode'])):
+    @property
+    def input_artifact(self):
+        return self._get_artifact(self.input)
+
+    @property
+    def output_artifact(self):
+        return self._get_artifact(self.output)
+
+    def _get_artifact(self, artifact_repr):
+        if self.state_mode == WrappablePairs.MODE_STATEFUL:
+            return artifact_repr.stateful_representation
+        elif self.state_mode == WrappablePairs.MODE_STATELESS:
+            return artifact_repr.stateless_representation
+        else:
+            raise Exception("Unknown state: {}".format(self.state_mode))
+
+
+class ArtifactRepresentation(object):
+    """
+    ArtifactRepresentation contains both the stateless and the statefull
+    representation of the same Artifact.
+
+    A validation makes sure there is no discrepancies apart from the qc-flag
+    """
+    def __init__(self, stateless_representation=None, stateful_representation=None):
+        self.stateless_representation = stateless_representation
+        self.stateful_representation = stateful_representation
