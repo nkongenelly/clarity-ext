@@ -183,12 +183,16 @@ class WrappablePairs(object):
     MODE_STATEFUL = "stateful"
 
     def __init__(self, session, input_output_maps, state_mode):
+        # Note, the force flag should be set to False as soon as the test period is over!
+        # Develop-1177
+        self.force = True
         self.session = session
         self.input_output_maps = input_output_maps
         self.state_mode = state_mode
         self.pairs = list()
         stateful_artifacts = self._fetch_stateful()
         stateless_artifacts = self._fetch_stateless()
+
         self.pairs = self._assemble_pairs(stateful_artifacts, stateless_artifacts)
 
     def __iter__(self):
@@ -236,7 +240,7 @@ class WrappablePairs(object):
             artifact_keys.add(input["uri"])
             artifact_keys.add(output["uri"])
 
-        return self.session.api.get_batch(artifact_keys)
+        return self.session.api.get_batch(artifact_keys, force=self.force)
 
     def _fetch_stateless(self):
         artifact_keys = set()
@@ -246,7 +250,7 @@ class WrappablePairs(object):
             artifact_keys.add(stateless_input)
             artifact_keys.add(stateless_output)
 
-        return self.session.api.get_batch(artifact_keys)
+        return self.session.api.get_batch(artifact_keys, force=self.force)
 
 
 class Pair(namedtuple('Pair', ['input', 'output', 'output_generation_type', 'state_mode'])):
