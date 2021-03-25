@@ -1,4 +1,5 @@
 from collections import namedtuple
+import xml.etree.ElementTree as ET
 from clarity_ext.domain.artifact import Artifact
 from clarity_ext.domain.shared_result_file import SharedResultFile
 from clarity_ext.repository.container_repository import ContainerRepository
@@ -24,6 +25,7 @@ class StepRepository(object):
         """
         self.session = session
         self.clarity_mapper = clarity_mapper
+        self.xml_discordance_errors = None
 
     def all_artifacts(self):
         """
@@ -44,6 +46,9 @@ class StepRepository(object):
         """
         input_output_maps = self.session.current_step.api_resource.input_output_maps
         wrappable_pairs = WrappablePairs(self.session, input_output_maps, WrappablePairs.MODE_STATELESS)
+        # We have to defer raising error until all artifacts are fetched.
+        # Step log is in the artifacts. The errors are to be written into the step log...
+        self.xml_discordance_errors = wrappable_pairs.validate()
 
         # Artifacts do not contain UDFs that have not been given a value. Since the domain objects returned
         # must know all UDFs available, we fetch them here:
@@ -71,6 +76,12 @@ class StepRepository(object):
             ret.append((input, output))
             outputs_by_id[output.id] = output
         return ret
+
+    def xml_discordance_string(self):
+        lst = list()
+        for e in self.xml_discordance_errors:
+            lst.append(str(e))
+        return '\n'.join(lst)
 
     def _wrap_input_output(self, input_resource, output_resource, container_repo,
                            process_type, output_generation_type):
@@ -195,6 +206,12 @@ class WrappablePairs(object):
 
         self.pairs = self._assemble_pairs(stateful_artifacts, stateless_artifacts)
 
+    def validate(self):
+        errors = list()
+        for pair in self.pairs:
+            errors.extend(pair.validate(self.session.api))
+        return errors
+
     def __iter__(self):
         self.counter = 0
         return self
@@ -269,6 +286,46 @@ class Pair(namedtuple('Pair', ['input', 'output', 'output_generation_type', 'sta
             return artifact_repr.stateless_representation
         else:
             raise Exception("Unknown state: {}".format(self.state_mode))
+
+    def validate(self, api):
+        errors = list()
+        if not api.is_equal(
+                self.input.stateless_representation,
+                self.input.stateful_representation,
+                exclude_tag='qc-flag'
+        ):
+            errors.append(XmlDiscordanceError(
+                self.input.stateless_representation,
+                self.input.stateful_representation
+            ))
+
+        if not api.is_equal(
+            self.output.stateless_representation,
+            self.output.stateful_representation,
+            exclude_tag='qc-flag'
+        ):
+            errors.append(XmlDiscordanceError(
+                self.output.stateless_representation,
+                self.output.stateful_representation
+            ))
+        return errors
+
+
+class XmlDiscordanceError(Exception):
+    def __init__(self, stateless_representation, stateful_representation):
+        self.stateless_representation = stateless_representation
+        self.stateful_representation = stateful_representation
+
+    def __repr__(self):
+        return "{}\n{}\n{}\n{}\n\n".format(
+            'stateless xml:',
+            ET.tostring(self.stateless_representation.root),
+            '(should match) stateful xml:',
+            ET.tostring(self.stateful_representation.root),
+        )
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class ArtifactRepresentation(object):

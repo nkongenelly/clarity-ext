@@ -16,6 +16,8 @@ from clarity_ext.service import ArtifactService, FileService
 from clarity_ext.utility.integration_test_service import IntegrationTest
 from clarity_ext.service.dilution.index_generation import ConfigValidator
 from clarity_ext.service.dilution.index_generation import ConfigParser
+from clarity_ext.domain.validation import ValidationException
+from clarity_ext.domain.validation import ValidationType
 from jinja2 import Template
 import time
 import random
@@ -258,10 +260,11 @@ class ExtensionService(object):
                                           disable_commits=disable_context_commit,
                                           uploaded_to_stdout=artifacts_to_stdout)
         instance = extension(context)
-        context.logger.log("Start running script '{}'".format(module))
-        # We add the config in this way (not via __init__) as a quick fix.
-        instance.config = config
         try:
+            context.logger.log("Start running script '{}'".format(module))
+            context.validate_xml_concordance()
+            # We add the config in this way (not via __init__) as a quick fix.
+            instance.config = config
             if issubclass(extension, DriverFileExtension):
                 context.file_service.upload(instance.shared_file(), instance.filename(), instance.to_string(),
                                             instance.file_prefix())
@@ -272,19 +275,28 @@ class ExtensionService(object):
             context.logger.log("Finished running script '{}'".format(module))
             context.commit()
         except UsageError as e:
-            # Commit in order to upload step log
-            # Ordinary files and objects shouldn't have been moved to upload queue,
-            # since the scipt have been interrupted by the usage error.
-            context.commit()
-            # UsageErrors are deferred and handled by the notify method
-            # To support the case (legacy) if someone raises an error without adding it to the defer list,
-            # we add it to the instance too:
-            if len(instance.errors) == 0:
-                instance.errors[e] = list()
+            self._commit_step_log(context, instance, e)
+        except Exception as e:
+            # All other unexpected exceptions should also be included in the step log
+            # as well as the underlying server log
+            error = ValidationException(str(e), ValidationType.ERROR)
+            context.validation_service.handle_single_validation(error)
+            self._commit_step_log(context, instance, e)
+
         os.chdir(old_dir)
 
         self.notify(instance.errors, instance.warnings, context.validation_service.error_count,
                     context.validation_service.warning_count, context, module)
+
+    def _commit_step_log(self, context, instance, error):
+        # Commit in order to upload step log
+        # Ordinary files and objects are not updated because the update queue are cleared
+        context.commit_step_log_only()
+        # UsageErrors are deferred and handled by the notify method
+        # To support the case (legacy) if someone raises an error without adding it to the defer list,
+        # we add it to the instance too:
+        if len(instance.errors) == 0:
+            instance.errors[error] = list()
 
     def notify(self, user_errors, user_warnings, other_errors_count, other_warnings_count, context, module):
         """Notifies the user of errors and warnings during execution. user_errors and user_warnings

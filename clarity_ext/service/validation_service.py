@@ -18,6 +18,10 @@ class ValidationService:
     def add_separate_error_step_log(self, step_logger_service):
         self.step_logger_service.errors_step_logger_service = step_logger_service
 
+    @property
+    def log_file_names(self):
+        return self.step_logger_service.log_file_names
+
     def handle_validation(self, results, tailored_error_message=None):
         """
         Pushes validation results to the logging framework
