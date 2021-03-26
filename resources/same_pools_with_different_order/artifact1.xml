@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<art:artifact xmlns:udf="http://genologics.com/ri/userdefined" xmlns:file="http://genologics.com/ri/file" xmlns:art="http://genologics.com/ri/artifact" uri="https://dev-server/api/v2/artifacts/2-139115?state=79916" limsid="2-139115">
+    <name>NovaSeq-RMLD_Pool1_31664_2nM_191212</name>
+    <type>Analyte</type>
+    <output-type>Analyte</output-type>
+    <parent-process uri="https://dev-server/api/v2/processes/122-31664" limsid="122-31664"/>
+    <qc-flag>UNKNOWN</qc-flag>
+    <location>
+        <container uri="https://dev-server/api/v2/containers/27-7054" limsid="27-7054"/>
+        <value>1:1</value>
+    </location>
+    <working-flag>true</working-flag>
+    <sample uri="https://dev-server/api/v2/samples/THO655A14" limsid="THO655A14"/>
+    <sample uri="https://dev-server/api/v2/samples/THO655A15" limsid="THO655A15"/>
+    <sample uri="https://dev-server/api/v2/samples/THO655A16" limsid="THO655A16"/>
+    <sample uri="https://dev-server/api/v2/samples/THO655A17" limsid="THO655A17"/>
+    <sample uri="https://dev-server/api/v2/samples/THO655A18" limsid="THO655A18"/>
+    <sample uri="https://dev-server/api/v2/samples/THO655A19" limsid="THO655A19"/>
+    <sample uri="https://dev-server/api/v2/samples/THO655A20" limsid="THO655A20"/>
+    <sample uri="https://dev-server/api/v2/samples/THO655A21" limsid="THO655A21"/>
+    <sample uri="https://dev-server/api/v2/samples/THO655A22" limsid="THO655A22"/>
+    <sample uri="https://dev-server/api/v2/samples/THO655A23" limsid="THO655A23"/>
+    <sample uri="https://dev-server/api/v2/samples/THO655A24" limsid="THO655A24"/>
+    <sample uri="https://dev-server/api/v2/samples/THO655A25" limsid="THO655A25"/>
+    <sample uri="https://dev-server/api/v2/samples/THO655A26" limsid="THO655A26"/>
+    <sample uri="https://dev-server/api/v2/samples/THO655A27" limsid="THO655A27"/>
+    <sample uri="https://dev-server/api/v2/samples/THO655A28" limsid="THO655A28"/>
+    <sample uri="https://dev-server/api/v2/samples/6C-2003" limsid="6C-2003"/>
+    <reagent-label name="D702-D506 (TCCGGAGA-TAATCTTA)"/>
+    <reagent-label name="D702-D507 (TCCGGAGA-CAGGACGT)"/>
+    <reagent-label name="D702-D508 (TCCGGAGA-GTACTGAC)"/>
+    <reagent-label name="D703-D501 (CGCTCATT-TATAGCCT)"/>
+    <reagent-label name="D703-D502 (CGCTCATT-ATAGAGGC)"/>
+    <reagent-label name="D703-D503 (CGCTCATT-CCTATCCT)"/>
+    <reagent-label name="D703-D504 (CGCTCATT-GGCTCTGA)"/>
+    <reagent-label name="D703-D505 (CGCTCATT-AGGCGAAG)"/>
+    <reagent-label name="D703-D506 (CGCTCATT-TAATCTTA)"/>
+    <reagent-label name="D703-D507 (CGCTCATT-CAGGACGT)"/>
+    <reagent-label name="D703-D508 (CGCTCATT-GTACTGAC)"/>
+    <reagent-label name="D704-D501 (GAGATTCC-TATAGCCT)"/>
+    <reagent-label name="D704-D502 (GAGATTCC-ATAGAGGC)"/>
+    <reagent-label name="D704-D503 (GAGATTCC-CCTATCCT)"/>
+    <reagent-label name="D704-D504 (GAGATTCC-GGCTCTGA)"/>
+    <control-type uri="https://dev-server/api/v2/controltypes/6"/>
+    <udf:field type="Numeric" name="Target vol. (ul)">20</udf:field>
+    <udf:field type="Numeric" name="Dil. calc. target vol">20</udf:field>
+    <udf:field type="Numeric" name="Current sample volume (ul)">20</udf:field>
+    <udf:field type="Numeric" name="Dil. calc. source vol">0</udf:field>
+    <workflow-stages>
+        <workflow-stage status="IN_PROGRESS" name="SNP&amp;SEQ Denature (NovaSeq) v1" uri="https://dev-server/api/v2/configuration/workflows/701/stages/7149"/>
+        <workflow-stage status="IN_PROGRESS" name="SNP&amp;SEQ Denature (NovaSeq) v1" uri="https://dev-server/api/v2/configuration/workflows/902/stages/8785"/>
+        <workflow-stage status="IN_PROGRESS" name="SNP&amp;SEQ Denature (NovaSeq) v1" uri="https://dev-server/api/v2/configuration/workflows/901/stages/8641"/>
+        <workflow-stage status="IN_PROGRESS" name="SNP&amp;SEQ Denature (NovaSeq) v1" uri="https://dev-server/api/v2/configuration/workflows/851/stages/8404"/>
+    </workflow-stages>
+</art:artifact>

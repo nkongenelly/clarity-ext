@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<art:artifact xmlns:udf="http://genologics.com/ri/userdefined" xmlns:file="http://genologics.com/ri/file" xmlns:art="http://genologics.com/ri/artifact" uri="https://dev-server/api/v2/artifacts/92-189520?state=107035" limsid="92-189520">
+    <name>Ladder</name>
+    <type>ResultFile</type>
+    <output-type>ResultFile</output-type>
+    <parent-process uri="https://dev-server/api/v2/processes/24-61209" limsid="24-61209"/>
+    <sample uri="https://dev-server/api/v2/samples/51C-2471" limsid="51C-2471"/>
+    <location>
+        <value>C:3</value>
+        <container uri="https://dev-server/api/v2/containers/27-8244" limsid="27-8244"/>
+    </location>
+    <control-type uri="https://dev-server/api/v2/controltypes/51"/>
+    <workflow-stages/>
+</art:artifact>
