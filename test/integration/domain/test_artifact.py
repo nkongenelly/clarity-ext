@@ -24,8 +24,8 @@ class TestIntegrationAnalyteRepository(unittest.TestCase):
             - Plate2: A3, E9
         """
         context = ExtensionContext.create("24-3643")
-        pairs = filter(lambda pair: isinstance(pair[0], Analyte) and
-                       isinstance(pair[1], Analyte), context.step_repo.all_artifacts())
+        pairs = [pair for pair in context.step_repo.all_artifacts() if isinstance(pair[0], Analyte) and
+                       isinstance(pair[1], Analyte)]
         # Of all the artifacts, we're only going to examine those that map from analytes
         # to analytes:
 

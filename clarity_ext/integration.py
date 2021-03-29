@@ -1,10 +1,10 @@
-from __future__ import print_function
+
 import os
 import shutil
 import logging
 import importlib
 import pkgutil
-from driverfile import DriverFileIntegrationTests
+from .driverfile import DriverFileIntegrationTests
 from clarity_ext.extensions import NoTestsFoundException
 
 

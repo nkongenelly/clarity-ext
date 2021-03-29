@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import click
 import logging
 from clarity_ext.service import ProcessService
@@ -53,7 +53,7 @@ def list_process_types(contains, list_procs, ui_links):
                 if list_procs == "active" and process.date_run is not None:
                     continue
                 uri = process.uri if not ui_links else process_svc.ui_link_process(process)
-                click.echo(u" - {}: date_run={}, technician={}".format(uri,
+                click.echo(" - {}: date_run={}, technician={}".format(uri,
                            process.date_run, process.technician.name))
 
 

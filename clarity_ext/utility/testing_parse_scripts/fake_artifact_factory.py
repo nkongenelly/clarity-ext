@@ -28,7 +28,7 @@ class FakeArtifactFactory:
                     target_type=Analyte, source_id=None, target_id=None):
 
         if pos_from is None:
-            well = self.well_enumerator.next()
+            well = next(self.well_enumerator)
             pos_from = well.position
         if pos_to is None:
             pos_to = pos_from

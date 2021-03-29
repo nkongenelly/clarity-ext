@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import re
 import os
 import shutil
@@ -96,7 +96,7 @@ class FileService:
                 file_name = file_name.split("_", 1)[1]
         elif file_prefix == FileService.FILE_PREFIX_RUNNING_NUMBER:
             # Prefix with the index of the shared file
-            artifact_ids = sorted([tuple(map(int, shared_file.id.split("-")) + [shared_file.id])
+            artifact_ids = sorted([tuple(list(map(int, shared_file.id.split("-"))) + [shared_file.id])
                                    for shared_file in self.artifact_service.shared_files()])
             running_numbers = {artifact_id[2]: ix + 1 for ix, artifact_id in enumerate(artifact_ids)}
             file_name = "{}_{}".format(running_numbers[artifact.id], file_name)
@@ -255,7 +255,7 @@ class FileService:
             self.logger.debug("Writing output to {}.".format(full_path))
             # Content should be either a string or something else we can
             # iterate over, in which case we need newline
-            if isinstance(content, basestring):
+            if isinstance(content, str):
                 try:
                     f.write(content)
                 except UnicodeEncodeError:
@@ -396,14 +396,14 @@ class LocalSharedFileProvider:
         # No match, take the first artifact with no files yet associated
         if fallback_on_first_unassigned and len(filtered_artifacts) == 0:
             for a in by_handle:
-                if len(a.files) == 0 and a.id not in self.file_service.artifactid_by_filename.itervalues():
+                if len(a.files) == 0 and a.id not in iter(self.file_service.artifactid_by_filename.values()):
                     filtered_artifacts = [a]
                     break
         elif not fallback_on_first_unassigned and len(filtered_artifacts) == 0:
             filtered_artifacts = by_handle
 
         if len(filtered_artifacts) != 1:
-            files = ", ".join(map(lambda x: x.name, shared_files))
+            files = ", ".join([x.name for x in shared_files])
             searched_filename = filename if filename is not None else file_handle
             raise SharedFileNotFound("Expected a shared file called '{}', got {}.\nFile handle: '{}'\nFiles: {}".format(
                 searched_filename, len(filtered_artifacts), file_handle, files))
@@ -421,7 +421,7 @@ class Csv:
         self.header = list()
         self.data = list()
         if file_stream:
-            if isinstance(file_stream, basestring):
+            if isinstance(file_stream, str):
                 with open(file_stream, "r") as fs:
                     self._init_from_file_stream(fs, delim, None)
             else:

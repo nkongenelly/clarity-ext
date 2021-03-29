@@ -424,7 +424,7 @@ def post_validate_dilution(dilution_scheme):
 
     for key, g in grouped_transfers:
         g = list(g)
-        total_volume = sum(map(lambda t: t.sample_volume + t.pipette_buffer_volume, g))
+        total_volume = sum([t.sample_volume + t.pipette_buffer_volume for t in g])
         if total_volume > 100:
             yield ValidationException("{}, too high destination volume ({}).".format(
                 g[0].target_aliquot_name, pos_str(g[0])))

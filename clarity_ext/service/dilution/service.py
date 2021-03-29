@@ -71,7 +71,7 @@ class DilutionSession(object):
         """Refreshes all calculations for all registered robots and runs registered handlers and validators."""
         self.pairs = pairs
         self.transfer_batches_by_robot = dict()
-        for robot_settings in self.robot_settings_by_name.values():
+        for robot_settings in list(self.robot_settings_by_name.values()):
             self.transfer_batches_by_robot[robot_settings.name] = self.create_batches(self.pairs, robot_settings)
         self.context.logger.write_staged()
 
@@ -162,7 +162,7 @@ class DilutionSession(object):
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug("Calculated transfer routes:")
-            for route in transfer_routes.values():
+            for route in list(transfer_routes.values()):
                 self.logger.debug(str(route))
 
         # NOTE: the transfer_routes dictionary now contains detailed information about which route each transfer
@@ -173,7 +173,7 @@ class DilutionSession(object):
         # Now group all evaluated transfers together into a batch
         transfer_by_batch = dict()
 
-        for transfer_route in transfer_routes.values():
+        for transfer_route in list(transfer_routes.values()):
             for transfer in transfer_route.transfers:
                 transfer_by_batch.setdefault(transfer.batch, list())
                 transfer_by_batch[transfer.batch].append(transfer)
@@ -256,7 +256,7 @@ class DilutionSession(object):
          - Target vol. should be updated on the target analyte
          - Source vol. should be updated on the source analyte
         """
-        for target, transfers in self.group_transfers_by_target_analyte(transfer_batches).items():
+        for target, transfers in list(self.group_transfers_by_target_analyte(transfer_batches).items()):
             # TODO: The `is_pooled` check is a quick-fix.
             if target.is_pool and self.dilution_settings.is_pooled:
                 regular_transfers = [t for t in transfers if not t.source_location.artifact.is_control]
@@ -288,7 +288,7 @@ class DilutionSession(object):
         the updated_source_vol is the same on both. This supports the use case where the
         user doesn't have to tell us which robot driver file they used, because the results will be the same.
         """
-        all_robots = self.transfer_batches_by_robot.items()
+        all_robots = list(self.transfer_batches_by_robot.items())
         candidate_name, candidate_batches = all_robots[0]
         candidate_update_infos = {key: value for key, value in self.update_infos_by_target_analyte(candidate_batches)}
 
@@ -302,7 +302,7 @@ class DilutionSession(object):
             # the current having the same update_source_vol. Other values can be different (e.g.
             # sort order, plate names on robots etc.)
             current_update_infos = {key: value for key, value in self.update_infos_by_target_analyte(current_batches)}
-            for analyte, candidate_update_info in candidate_update_infos.items():
+            for analyte, candidate_update_info in list(candidate_update_infos.items()):
                 current_update_info = current_update_infos[analyte]
                 if candidate_update_info != current_update_info:
                     raise Exception("There is a difference between the update infos between {} and {}. You need "
@@ -324,7 +324,7 @@ class DilutionSession(object):
         report = list()
         report.append("Dilution Session:")
         report.append("")
-        for robot, transfer_batches in self.transfer_batches_by_robot.items():
+        for robot, transfer_batches in list(self.transfer_batches_by_robot.items()):
             report.append("Robot: {}".format(robot))
             for transfer_batch in transfer_batches:
                 report.append(transfer_batch.report())
@@ -491,7 +491,7 @@ class VirtualTransferBatch(object):
                 return transfer.target_location.artifact.id
             s = sorted(transfers, key=group_key)
             return {k: list(t) for k, t in groupby(s, key=group_key)}
-        return {k: VirtualTransfer(t) for k, t in group().items()}
+        return {k: VirtualTransfer(t) for k, t in list(group().items())}
 
 
 class VirtualTransfer(object):
@@ -603,13 +603,13 @@ class SortStrategy:
             return len(a_list[0])
 
         strings_in_name = re.split('[-_]*\d+[-_]*', container.name)
-        strings_in_name = map(conv_lower, strings_in_name)
+        strings_in_name = list(map(conv_lower, strings_in_name))
         numbers_in_name = re.split('[-_]*\D+[-_]*', container.name)
         zip_arg = sorted([numbers_in_name, strings_in_name], key=zip_order)
-        zipped = zip(*zip_arg)
+        zipped = list(zip(*zip_arg))
         flatlist = list(chain(*zipped))
         sortlist_of_strings = [item for item in flatlist if len(item) > 0]
-        sortlist = [container.sort_weight, not container.is_temporary] + map(conv_int, sortlist_of_strings)
+        sortlist = [container.sort_weight, not container.is_temporary] + list(map(conv_int, sortlist_of_strings))
         return tuple(sortlist)
 
 
@@ -757,8 +757,8 @@ class DilutionSettings:
 
     @staticmethod
     def _parse_conc_ref(concentration_ref):
-        if isinstance(concentration_ref, basestring):
-            for key, value in DilutionSettings.CONCENTRATION_REF_TO_STR.items():
+        if isinstance(concentration_ref, str):
+            for key, value in list(DilutionSettings.CONCENTRATION_REF_TO_STR.items()):
                 if value.lower() == concentration_ref.lower():
                     return key
         else:
@@ -769,9 +769,7 @@ class DilutionSettings:
         return DilutionSettings.CONCENTRATION_REF_TO_STR[conc_ref]
 
 
-class RobotSettings(object):
-    __metaclass__ = abc.ABCMeta
-
+class RobotSettings(object, metaclass=abc.ABCMeta):
     def __init__(self):
         """
         Inherit from this file to supply new settings for a robot
@@ -1024,9 +1022,8 @@ class ContainerSlot(object):
         return "{} ({}): [{}]".format(self.name, "source" if self.is_source else "target", self.container)
 
 
-class TransferHandlerBase(object):
+class TransferHandlerBase(object, metaclass=abc.ABCMeta):
     """Base class for all handlers"""
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, dilution_session, dilution_settings, robot_settings, virtual_batch):
         self.dilution_session = dilution_session
@@ -1105,9 +1102,8 @@ class StrategyChoiceHandlerBase(TransferHandlerBase):
         return strategy.run(transfer_route_node)
 
 
-class TransferSplitHandlerBase(TransferHandlerBase):
+class TransferSplitHandlerBase(TransferHandlerBase, metaclass=abc.ABCMeta):
     """Base class for handlers that can split one transfer into more"""
-    __metaclass__ = abc.ABCMeta
 
     # TODO: Better naming so it's clear that this differs from the row-split
     def handle_split(self, transfer, temp_transfer, main_transfer):

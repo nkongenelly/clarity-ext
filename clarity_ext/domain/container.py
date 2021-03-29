@@ -68,7 +68,7 @@ class ContainerPosition(namedtuple("ContainerPosition", ["row", "col"])):
         """
         if not repr:
             return None
-        if isinstance(repr, basestring):
+        if isinstance(repr, str):
             if ":" in repr:
                 row, col = repr.split(":")
             else:
@@ -85,7 +85,7 @@ class ContainerPosition(namedtuple("ContainerPosition", ["row", "col"])):
             col = int(col)
         else:
             row, col = repr
-            if isinstance(row, basestring):
+            if isinstance(row, str):
                 row = ContainerPosition.letter_to_index(row)
         return ContainerPosition(row=row, col=col)
 
@@ -183,7 +183,7 @@ class Container(DomainObjectWithUdfMixin):
             table = self.to_table()
             longest = 0
             for row in table:
-                rows.append(map(well_to_string, row))
+                rows.append(list(map(well_to_string, row)))
                 longest = max(max(len(cell) for cell in rows[-1]), longest)
             for i in range(len(rows)):
                 rows[i] = "|".join([cell.ljust(longest, " ") for cell in rows[i]])
@@ -201,13 +201,13 @@ class Container(DomainObjectWithUdfMixin):
     @property
     def rows(self):
         # Enumerates the row indexes, returning e.g. (A,B,...,H) for a 96 well plate
-        for index in xrange(1, self.size.height + 1):
+        for index in range(1, self.size.height + 1):
             yield ContainerPosition.index_to_letter(index)
 
     @property
     def columns(self):
         # Enumerates the column indexes, returning e.g. (1,2,...12) for a 96 well plate
-        for index in xrange(1, self.size.width + 1):
+        for index in range(1, self.size.width + 1):
             yield index
 
     @staticmethod
@@ -252,8 +252,8 @@ class Container(DomainObjectWithUdfMixin):
         if not self.size:
             raise ValueError("Not able to traverse the container without a plate size")
 
-        rows = range(1, self.size.height + 1)
-        cols = range(1, self.size.width + 1)
+        rows = list(range(1, self.size.height + 1))
+        cols = list(range(1, self.size.width + 1))
         if order == self.RIGHT_FIRST:
             return ((row, col) for row in rows for col in cols)
         else:

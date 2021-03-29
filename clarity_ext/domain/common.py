@@ -1,4 +1,4 @@
-from __builtin__ import isinstance
+from builtins import isinstance
 import copy
 
 

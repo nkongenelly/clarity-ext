@@ -52,7 +52,7 @@ class ClarityService(object):
     def _update_process(self, process):
         # Updates the process itself. Currently only the udfs
         for item in process.udf_map.enumerate_updated():
-            print(item.key, item.value)
+            print((item.key, item.value))
             process.api_resource.udf[item.key] = item.value
         process.api_resource.put()
 
@@ -60,16 +60,16 @@ class ClarityService(object):
         # Filter out artifacts that don't have any updated fields:
         map_artifact_to_resource = {artifact: artifact.get_updated_api_resource()
                                     for artifact in artifacts}
-        if sum(1 for value in map_artifact_to_resource.values()
+        if sum(1 for value in list(map_artifact_to_resource.values())
                if value is not None) == 0:
             return 0
-        ret = self.step_repository.update_artifacts([res for res in map_artifact_to_resource.values()
+        ret = self.step_repository.update_artifacts([res for res in list(map_artifact_to_resource.values())
                                                      if res is not None])
 
         # Now update all the artifacts so they have the latest version of the api resource.
         # This is a bit strange, it would be cleaner to create a new API resource from the domain
         # object, but for simplicity we currently keep the original API resource.
-        for artifact, resource in map_artifact_to_resource.items():
+        for artifact, resource in list(map_artifact_to_resource.items()):
             if resource:
                 artifact.api_resource = resource
         return ret

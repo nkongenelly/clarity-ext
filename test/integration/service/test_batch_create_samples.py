@@ -9,7 +9,7 @@ class TestBatchCreate(unittest.TestCase):
         context = ExtensionContext.create(None)
         svc = context.clarity_service
         project = svc.get_project_by_name("Test-0001")
-        print(project.name)
+        print((project.name))
         container = Container(name=str(uuid.uuid4()),
                               container_type=Container.CONTAINER_TYPE_96_WELLS_PLATE)
 

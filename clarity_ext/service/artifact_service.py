@@ -43,9 +43,9 @@ class ArtifactService:
         """
         Returns all aliquots in a step as an artifact pair (input/output)
         """
-        pairs = self.step_repository.all_artifacts()
-        aliquots_only = filter(lambda pair: isinstance(pair[0], Aliquot) and
-                               isinstance(pair[1], Aliquot), pairs)
+        pairs = self.all_artifacts()
+        aliquots_only = [pair for pair in pairs if isinstance(pair[0], Aliquot) and
+                               isinstance(pair[1], Aliquot)]
         return [ArtifactPair(i, o) for i, o in aliquots_only]
 
     def all_analyte_pairs(self):
@@ -53,8 +53,8 @@ class ArtifactService:
         Returns all analytes in a step as an artifact pair (input/output)
         """
         pairs = self.all_artifacts()
-        analytes_only = filter(lambda pair: isinstance(pair[0], Analyte) and
-                               isinstance(pair[1], Analyte), pairs)
+        analytes_only = [pair for pair in pairs if isinstance(pair[0], Analyte) and
+                               isinstance(pair[1], Analyte)]
         return [ArtifactPair(i, o) for i, o in analytes_only]
 
     def all_input_artifacts(self):
@@ -74,11 +74,11 @@ class ArtifactService:
 
     def all_input_analytes(self):
         """Returns a unique list of input analytes"""
-        return filter(lambda x: isinstance(x, Analyte), self.all_input_artifacts())
+        return [x for x in self.all_input_artifacts() if isinstance(x, Analyte)]
 
     def all_output_analytes(self):
         """Returns a unique list of output analytes"""
-        return filter(lambda x: isinstance(x, Analyte), self.all_output_artifacts())
+        return [x for x in self.all_output_artifacts() if isinstance(x, Analyte)]
 
     def all_containers(self):
         """
@@ -91,7 +91,7 @@ class ArtifactService:
                     key = in_artifact.container.id + "|" + out_artifact.container.id
                     if key not in containers:
                         containers[key] = (in_artifact.container, out_artifact.container)
-        return containers.values()
+        return list(containers.values())
 
     def all_output_containers(self):
         containers_non_unique = (artifact.container

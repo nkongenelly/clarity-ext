@@ -1,10 +1,10 @@
-from __future__ import print_function
+
 import importlib
 import os
 import sys
 import codecs
 import shutil
-from context import ExtensionContext
+from .context import ExtensionContext
 import clarity_ext.utils as utils
 from abc import ABCMeta, abstractmethod
 import logging
@@ -217,14 +217,14 @@ class ExtensionService(object):
             # The run argument can be either an IntegrationTest or just a string (pid)
             if isinstance(in_argument, IntegrationTest):
                 test = in_argument
-            elif isinstance(in_argument, basestring):
+            elif isinstance(in_argument, str):
                 test = IntegrationTest(pid=in_argument)
             else:
                 raise ValueError("Unexpected run argument type")
             return test
 
         instance = self._get_extension(module)(None)
-        ret = map(parse_run_argument, instance.integration_tests())
+        ret = list(map(parse_run_argument, instance.integration_tests()))
         if require_tests and len(ret) == 0:
             raise NoTestsFoundException()
         return ret
@@ -320,7 +320,7 @@ class ExtensionService(object):
         if len(bag) == 0:
             return None
         messages = list()
-        for key, values in bag.items():
+        for key, values in list(bag.items()):
             current = "{}".format(key)
             if values:
                 current += ": {}".format(values)
@@ -417,11 +417,10 @@ class RunDirectoryInfo(object):
                 yield ("logs", "extensions.log", "".join(diff[0:10]))
 
 
-class GeneralExtension(object):
+class GeneralExtension(object, metaclass=ABCMeta):
     """
     An extension that must implement the `execute` method
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, context):
         """
@@ -559,9 +558,7 @@ class GeneralExtension(object):
                     self.context.update(target)
 
 
-class DriverFileExtension(GeneralExtension):
-    __metaclass__ = ABCMeta
-
+class DriverFileExtension(GeneralExtension, metaclass=ABCMeta):
     @abstractmethod
     def shared_file(self):
         """Returns the name of the shared file that should include the newly generated file"""
@@ -579,7 +576,7 @@ class DriverFileExtension(GeneralExtension):
         content = self.content()
         # Support that the content can be a list of strings. This supports an older version of the DriverFileExtension
         # which was not template based. Consider removing this usage of the DriverFileExtension.
-        if isinstance(content, basestring):
+        if isinstance(content, str):
             return content
         else:
             return self.newline().join(content)
@@ -595,7 +592,7 @@ class IndexFileExtension(GeneralExtension):
         expected_sample_name, sample_candidates, validator = \
             self._prepare_validation(input_analytes)
         validator.validate(expected_sample_name, sample_candidates, input_analytes)
-        from utils import single
+        from .utils import single
         sample = single(sample_candidates)
         files = list()
         config_parser = ConfigParser(sample)
@@ -652,11 +649,10 @@ class IndexFileExtension(GeneralExtension):
         pass
 
 
-class SampleSheetExtension(GeneralExtension):
+class SampleSheetExtension(GeneralExtension, metaclass=ABCMeta):
     """
     Provides helper methods for creating a CSV
     """
-    __metaclass__ = ABCMeta
 
     NONE = "<none>"
 
@@ -685,11 +681,10 @@ class SampleSheetExtension(GeneralExtension):
         return ",".join(map(str, arg_list))
 
 
-class TemplateExtension(DriverFileExtension):
+class TemplateExtension(DriverFileExtension, metaclass=ABCMeta):
     """
     Creates driver files from templates
     """
-    __metaclass__ = ABCMeta
 
     NONE = "<none>"
 

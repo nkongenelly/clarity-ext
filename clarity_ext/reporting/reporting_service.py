@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import requests_cache
 import re
 
@@ -19,7 +19,7 @@ class ReportingService(object):
         projects = self.session.api.get_projects()
         used_udfs = set()
         for project in projects:
-            for k, v in project.udf.items():
+            for k, v in list(project.udf.items()):
                 used_udfs.add(k)
 
         ignore_udf_patterns = [re.compile(p) for p in ignore_udf]
@@ -44,7 +44,7 @@ class ReportingService(object):
             if not obj:
                 return ""
             else:
-                return u"{}".format(obj)
+                return "{}".format(obj)
 
         # Print values
         for project in filter(keep_project, projects):
@@ -52,11 +52,11 @@ class ReportingService(object):
             for header in unique_headers:
                 if header in project.udf:
                     value = project.udf[header]
-                    if isinstance(value, basestring):
+                    if isinstance(value, str):
                         value = value.replace("\t", r"\t")
                         value = value.replace("\n", r"\n")
                     row.append(value)
                 else:
                     row.append(None)
-            print(u"\t".join(map(massage_value, row)))
+            print("\t".join(map(massage_value, row)))
 
