@@ -37,6 +37,9 @@ class Artifact(DomainObjectWithUdfMixin):
         if not is_input:
             self._set_output_type()
 
+    def __hash__(self):
+        return hash(self.id)
+
     def _set_output_type(self):
         raise NotImplementedError(
             'Output type {} is not implemented'.format(self.__class__.__name__))
