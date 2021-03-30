@@ -32,7 +32,7 @@ class StepLoggerService(object):
     @lazyprop
     def step_log(self):
         try:
-            mode = "ab" if self.append else "wb"
+            mode = "a" if self.append else "w"
             return self.file_service.local_shared_file_search_or_create(self.file_handle,
                                                                         extension=self.extension,
                                                                         mode=mode,
