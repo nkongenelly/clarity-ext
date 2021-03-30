@@ -41,9 +41,6 @@ class DomainObjectWithUdfMixin(DomainObjectMixin):
         else:
             super(DomainObjectWithUdfMixin, self).__setattr__(key, value)
 
-    def __hash__(self):
-        return hash(self.id)
-
     def _create_udf_exception(self, key):
         return AttributeError("The udf '{}' does not exist in the udf_map. Available values are: '{}'"
                               .format(key, self.udf_map.usage()))
