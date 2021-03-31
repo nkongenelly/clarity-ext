@@ -18,10 +18,9 @@ class ReadResultFileBuilder:
         self.pair_builder = PairBuilder()
         self.extension_type = None
 
-    def create_pair(self, target_artifact_id, name=None):
+    def create_pair(self, target_artifact_id):
         artifact_pair_builder = self.pair_builder
         artifact_pair_builder.with_target_id(target_artifact_id)
-        artifact_pair_builder.with_name(name)
         artifact_pair_builder.create()
         return artifact_pair_builder.pair
 
