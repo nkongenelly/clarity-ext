@@ -43,7 +43,7 @@ class ArtifactService:
         """
         Returns all aliquots in a step as an artifact pair (input/output)
         """
-        pairs = self.all_artifacts()
+        pairs = self.step_repository.all_artifacts()
         aliquots_only = filter(lambda pair: isinstance(pair[0], Aliquot) and
                                isinstance(pair[1], Aliquot), pairs)
         return [ArtifactPair(i, o) for i, o in aliquots_only]

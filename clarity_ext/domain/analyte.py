@@ -19,7 +19,6 @@ class Analyte(Aliquot):
                  samples=None,
                  name=None,
                  well=None,
-                 qc_flag=None,
                  is_control=False,
                  udf_map=None,
                  is_from_original=None,
@@ -33,7 +32,6 @@ class Analyte(Aliquot):
                                              samples=samples,
                                              name=name,
                                              well=well,
-                                             qc_flag=qc_flag,
                                              udf_map=udf_map,
                                              mapper=mapper)
         self.is_control = is_control
