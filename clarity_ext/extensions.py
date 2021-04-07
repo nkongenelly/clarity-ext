@@ -275,23 +275,22 @@ class ExtensionService(object):
             context.logger.log("Finished running script '{}'".format(module))
             context.commit()
         except UsageError as e:
-            self._commit_step_log(context, instance, e)
+            context.commit_step_log_only()
+            self._ensure_error_on_instance(instance, e)
         except Exception as e:
             # All other unexpected exceptions should also be included in the step log
             # as well as the underlying server log
             error = ValidationException(str(e), ValidationType.ERROR)
             context.validation_service.handle_single_validation(error)
-            self._commit_step_log(context, instance, e)
+            context.commit_step_log_only()
+            self._ensure_error_on_instance(instance, e)
 
         os.chdir(old_dir)
 
         self.notify(instance.errors, instance.warnings, context.validation_service.error_count,
                     context.validation_service.warning_count, context, module)
 
-    def _commit_step_log(self, context, instance, error):
-        # Commit in order to upload step log
-        # Ordinary files and objects are not updated because the update queue are cleared
-        context.commit_step_log_only()
+    def _ensure_error_on_instance(self, instance, error):
         # UsageErrors are deferred and handled by the notify method
         # To support the case (legacy) if someone raises an error without adding it to the defer list,
         # we add it to the instance too:
