@@ -240,7 +240,6 @@ class FileService:
 
     def _commit_file(self, disable_commits, artifact_id, file_name):
         """Copies files in the upload queue to the server"""
-        print('file name: {}'.format(file_name))
         if disable_commits:
             self.logger.info("Uploading (disabled) file: {}".format(os.path.abspath(file_name)))
         else:

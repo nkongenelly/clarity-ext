@@ -62,10 +62,10 @@ class StepRepository(object):
         # that we create only one artifact domain object in this case:
         outputs_by_id = dict()
         container_repo = ContainerRepository()
-        for genologics_input, genologics_output, output_generation_type in wrappable_pairs:
+        for raw_input, raw_output, output_generation_type in wrappable_pairs:
             input, output = self._wrap_input_output(
-                genologics_input,
-                genologics_output,
+                raw_input,
+                raw_output,
                 container_repo,
                 process_type,
                 output_generation_type
@@ -186,7 +186,7 @@ class WrappablePairs(object):
         input  # genologics Artifact, either stateful or stateless
         output  # genologics Artifact
 
-    The validation compares the stateless and statefull xml representation,
+    The validation compares the stateless and stateful xml representation,
     and discards any discrepancies in the qc-flag
     """
 
