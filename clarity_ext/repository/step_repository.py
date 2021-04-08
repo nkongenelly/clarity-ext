@@ -1,5 +1,6 @@
 from collections import namedtuple
 import xml.etree.ElementTree as ET
+from clarity_ext.utility.xml_comparison import ComparableXml
 from clarity_ext.domain.artifact import Artifact
 from clarity_ext.domain.shared_result_file import SharedResultFile
 from clarity_ext.repository.container_repository import ContainerRepository
@@ -289,7 +290,7 @@ class Pair(namedtuple('Pair', ['input', 'output', 'output_generation_type', 'sta
 
     def validate(self, api):
         errors = list()
-        if not api.is_equal(
+        if not self._is_equal(
                 self.input.stateless_representation,
                 self.input.stateful_representation,
                 exclude_tag='qc-flag'
@@ -299,7 +300,7 @@ class Pair(namedtuple('Pair', ['input', 'output', 'output_generation_type', 'sta
                 self.input.stateful_representation
             ))
 
-        if not api.is_equal(
+        if not self._is_equal(
             self.output.stateless_representation,
             self.output.stateful_representation,
             exclude_tag='qc-flag'
@@ -309,6 +310,11 @@ class Pair(namedtuple('Pair', ['input', 'output', 'output_generation_type', 'sta
                 self.output.stateful_representation
             ))
         return errors
+
+    def _is_equal(self, entity1, entity2, exclude_tag=None):
+        c1 = ComparableXml(ET.tostring(entity1.root), exclude_tag=exclude_tag)
+        c2 = ComparableXml(ET.tostring(entity2.root), exclude_tag=exclude_tag)
+        return c1.tostring() == c2.tostring()
 
 
 class XmlDiscordanceError(Exception):
