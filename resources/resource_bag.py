@@ -38,3 +38,10 @@ def get_differeing_qc_flags():
     path1 = os.path.join(ddir, 'artifact1.xml')
     path2 = os.path.join(ddir, 'artifact2.xml')
     return read_binary_file(path1), read_binary_file(path2)
+
+
+def get_different_outside_qc_flag():
+    ddir = get_directory('different_outside_qc_flag')
+    path1 = os.path.join(ddir, 'artifact1.xml')
+    path2 = os.path.join(ddir, 'artifact2.xml')
+    return read_binary_file(path1), read_binary_file(path2)

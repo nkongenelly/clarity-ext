@@ -4,6 +4,7 @@ from resources.resource_bag import get_same_without_qc_flags
 from resources.resource_bag import get_same_but_in_different_order
 from resources.resource_bag import get_same_pools_with_different_order
 from resources.resource_bag import get_differeing_qc_flags
+from resources.resource_bag import get_different_outside_qc_flag
 
 
 class TestXmlComparison(unittest.TestCase):
@@ -30,6 +31,12 @@ class TestXmlComparison(unittest.TestCase):
         str1 = self._parse(xml1)
         str2 = self._parse(xml2)
         self.assertEqual(str1, str2)
+
+    def test_different_xml__is_discovered(self):
+        xml1, xml2 = get_different_outside_qc_flag()
+        str1 = self._parse(xml1)
+        str2 = self._parse(xml2)
+        self.assertNotEqual(str1, str2)
 
     def _parse(self, resource):
         comparable = ComparableXml(resource, exclude_tag='qc-flag')
