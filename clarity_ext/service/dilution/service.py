@@ -288,7 +288,7 @@ class DilutionSession(object):
         the updated_source_vol is the same on both. This supports the use case where the
         user doesn't have to tell us which robot driver file they used, because the results will be the same.
         """
-        all_robots = self.transfer_batches_by_robot.items()
+        all_robots = list(self.transfer_batches_by_robot.items())
         candidate_name, candidate_batches = all_robots[0]
         candidate_update_infos = {key: value for key, value in self.update_infos_by_target_analyte(candidate_batches)}
 
@@ -491,7 +491,7 @@ class VirtualTransferBatch(object):
                 return transfer.target_location.artifact.id
             s = sorted(transfers, key=group_key)
             return {k: list(t) for k, t in groupby(s, key=group_key)}
-        return {k: VirtualTransfer(t) for k, t in group().items()}
+        return {k: VirtualTransfer(t) for k, t in list(group().items())}
 
 
 class VirtualTransfer(object):
@@ -603,13 +603,13 @@ class SortStrategy:
             return len(a_list[0])
 
         strings_in_name = re.split('[-_]*\d+[-_]*', container.name)
-        strings_in_name = map(conv_lower, strings_in_name)
+        strings_in_name = list(map(conv_lower, strings_in_name))
         numbers_in_name = re.split('[-_]*\D+[-_]*', container.name)
         zip_arg = sorted([numbers_in_name, strings_in_name], key=zip_order)
-        zipped = zip(*zip_arg)
+        zipped = list(zip(*zip_arg))
         flatlist = list(chain(*zipped))
         sortlist_of_strings = [item for item in flatlist if len(item) > 0]
-        sortlist = [container.sort_weight, not container.is_temporary] + map(conv_int, sortlist_of_strings)
+        sortlist = [container.sort_weight, not container.is_temporary] + list(map(conv_int, sortlist_of_strings))
         return tuple(sortlist)
 
 
@@ -757,7 +757,7 @@ class DilutionSettings:
 
     @staticmethod
     def _parse_conc_ref(concentration_ref):
-        if isinstance(concentration_ref, basestring):
+        if isinstance(concentration_ref, str):
             for key, value in DilutionSettings.CONCENTRATION_REF_TO_STR.items():
                 if value.lower() == concentration_ref.lower():
                     return key
@@ -769,9 +769,7 @@ class DilutionSettings:
         return DilutionSettings.CONCENTRATION_REF_TO_STR[conc_ref]
 
 
-class RobotSettings(object):
-    __metaclass__ = abc.ABCMeta
-
+class RobotSettings(object, metaclass=abc.ABCMeta):
     def __init__(self):
         """
         Inherit from this file to supply new settings for a robot
@@ -1024,9 +1022,8 @@ class ContainerSlot(object):
         return "{} ({}): [{}]".format(self.name, "source" if self.is_source else "target", self.container)
 
 
-class TransferHandlerBase(object):
+class TransferHandlerBase(object, metaclass=abc.ABCMeta):
     """Base class for all handlers"""
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, dilution_session, dilution_settings, robot_settings, virtual_batch):
         self.dilution_session = dilution_session
@@ -1105,9 +1102,8 @@ class StrategyChoiceHandlerBase(TransferHandlerBase):
         return strategy.run(transfer_route_node)
 
 
-class TransferSplitHandlerBase(TransferHandlerBase):
+class TransferSplitHandlerBase(TransferHandlerBase, metaclass=abc.ABCMeta):
     """Base class for handlers that can split one transfer into more"""
-    __metaclass__ = abc.ABCMeta
 
     # TODO: Better naming so it's clear that this differs from the row-split
     def handle_split(self, transfer, temp_transfer, main_transfer):

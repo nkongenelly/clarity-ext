@@ -173,7 +173,7 @@ class UdfMapping(object):
         return udf_info[0]
 
     def create_from_dict(self, udf_dict):
-        for key, value in udf_dict.items():
+        for key, value in list(udf_dict.items()):
             self.add(key, value)
 
     def usage(self):
@@ -214,7 +214,7 @@ class UdfMapping(object):
         # The UDF can be defined either in the api_process' udf dictionary or
         # in the process_output, or both:
         all_udfs = set()
-        all_udfs.update([key for key, value in api_resource.udf.items()])  # keys() is not available
+        all_udfs.update([key for key, value in list(api_resource.udf.items())])  # keys() is not available
         all_udfs.update(process_output.field_definitions)
         return {key: api_resource.udf.get(key, None) for key in all_udfs}
 

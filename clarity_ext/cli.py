@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import sys
 import click
 import logging
@@ -103,7 +103,7 @@ def extension(module, mode, args, cache):
     try:
 
         # Parse the run arguments list:
-        if args and isinstance(args, basestring):
+        if args and isinstance(args, str):
             separated = args.split(" ")
             key_values = (argument.split("=") for argument in separated)
             args = [{key: value for key, value in key_values}]
