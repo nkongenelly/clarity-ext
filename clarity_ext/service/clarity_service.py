@@ -52,7 +52,7 @@ class ClarityService(object):
     def _update_process(self, process):
         # Updates the process itself. Currently only the udfs
         for item in process.udf_map.enumerate_updated():
-            print((item.key, item.value))
+            print(item.key, item.value)
             process.api_resource.udf[item.key] = item.value
         process.api_resource.put()
 

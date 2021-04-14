@@ -71,7 +71,7 @@ class DilutionSession(object):
         """Refreshes all calculations for all registered robots and runs registered handlers and validators."""
         self.pairs = pairs
         self.transfer_batches_by_robot = dict()
-        for robot_settings in list(self.robot_settings_by_name.values()):
+        for robot_settings in self.robot_settings_by_name.values():
             self.transfer_batches_by_robot[robot_settings.name] = self.create_batches(self.pairs, robot_settings)
         self.context.logger.write_staged()
 
@@ -162,7 +162,7 @@ class DilutionSession(object):
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug("Calculated transfer routes:")
-            for route in list(transfer_routes.values()):
+            for route in transfer_routes.values():
                 self.logger.debug(str(route))
 
         # NOTE: the transfer_routes dictionary now contains detailed information about which route each transfer
@@ -173,7 +173,7 @@ class DilutionSession(object):
         # Now group all evaluated transfers together into a batch
         transfer_by_batch = dict()
 
-        for transfer_route in list(transfer_routes.values()):
+        for transfer_route in transfer_routes.values():
             for transfer in transfer_route.transfers:
                 transfer_by_batch.setdefault(transfer.batch, list())
                 transfer_by_batch[transfer.batch].append(transfer)
@@ -256,7 +256,7 @@ class DilutionSession(object):
          - Target vol. should be updated on the target analyte
          - Source vol. should be updated on the source analyte
         """
-        for target, transfers in list(self.group_transfers_by_target_analyte(transfer_batches).items()):
+        for target, transfers in self.group_transfers_by_target_analyte(transfer_batches).items():
             # TODO: The `is_pooled` check is a quick-fix.
             if target.is_pool and self.dilution_settings.is_pooled:
                 regular_transfers = [t for t in transfers if not t.source_location.artifact.is_control]
@@ -302,7 +302,7 @@ class DilutionSession(object):
             # the current having the same update_source_vol. Other values can be different (e.g.
             # sort order, plate names on robots etc.)
             current_update_infos = {key: value for key, value in self.update_infos_by_target_analyte(current_batches)}
-            for analyte, candidate_update_info in list(candidate_update_infos.items()):
+            for analyte, candidate_update_info in candidate_update_infos.items():
                 current_update_info = current_update_infos[analyte]
                 if candidate_update_info != current_update_info:
                     raise Exception("There is a difference between the update infos between {} and {}. You need "
@@ -324,7 +324,7 @@ class DilutionSession(object):
         report = list()
         report.append("Dilution Session:")
         report.append("")
-        for robot, transfer_batches in list(self.transfer_batches_by_robot.items()):
+        for robot, transfer_batches in self.transfer_batches_by_robot.items():
             report.append("Robot: {}".format(robot))
             for transfer_batch in transfer_batches:
                 report.append(transfer_batch.report())
@@ -758,7 +758,7 @@ class DilutionSettings:
     @staticmethod
     def _parse_conc_ref(concentration_ref):
         if isinstance(concentration_ref, str):
-            for key, value in list(DilutionSettings.CONCENTRATION_REF_TO_STR.items()):
+            for key, value in DilutionSettings.CONCENTRATION_REF_TO_STR.items():
                 if value.lower() == concentration_ref.lower():
                     return key
         else:

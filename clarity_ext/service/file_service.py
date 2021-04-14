@@ -96,7 +96,7 @@ class FileService:
                 file_name = file_name.split("_", 1)[1]
         elif file_prefix == FileService.FILE_PREFIX_RUNNING_NUMBER:
             # Prefix with the index of the shared file
-            artifact_ids = sorted([tuple(list(map(int, shared_file.id.split("-"))) + [shared_file.id])
+            artifact_ids = sorted([tuple(map(int, shared_file.id.split("-")) + [shared_file.id])
                                    for shared_file in self.artifact_service.shared_files()])
             running_numbers = {artifact_id[2]: ix + 1 for ix, artifact_id in enumerate(artifact_ids)}
             file_name = "{}_{}".format(running_numbers[artifact.id], file_name)

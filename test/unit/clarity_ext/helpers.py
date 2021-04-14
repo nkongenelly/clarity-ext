@@ -53,7 +53,7 @@ def fake_result_file(artifact_id=None, name=None, container_id=None, well_key=No
     well = Well(pos, container)
     api_resource = MagicMock()
     if udfs is None:
-        udfs = {TEST_UDF_MAP[key]: value for key, value in list(kwargs.items())}
+        udfs = {TEST_UDF_MAP[key]: value for key, value in kwargs.items()}
     udf_map = UdfMapping(udfs)
     ret = ResultFile(api_resource=api_resource, is_input=is_input, id=artifact_id, samples=None, udf_map=udf_map,
                      name=name, well=well)
@@ -79,7 +79,7 @@ def fake_analyte(container_id=None, artifact_id=None, sample_ids=None, analyte_n
     :kwargs: UDFs, where the udfs must be in the test udf mapping. Ignored if udfs is provided.
     """
     if udfs is None:
-        udfs = {TEST_UDF_MAP[key]: value for key, value in list(kwargs.items())}
+        udfs = {TEST_UDF_MAP[key]: value for key, value in kwargs.items()}
     # TODO: Always have an api_resource, remove from signature
     api_resource = MagicMock()
     api_resource.udf = udfs
@@ -244,18 +244,18 @@ def analytes_to_result_files_set():
 
 
 def print_out_dict(object_list, caption):
-    print(("{}:".format(caption)))
+    print("{}:".format(caption))
     print("-----------------------------------------")
     for o in object_list:
-        print(("{}:".format(o)))
+        print("{}:".format(o))
         for key in o.__dict__:
-            print(("{} {}".format(key, o.__dict__[key])))
+            print("{} {}".format(key, o.__dict__[key]))
         print("-----------------------------------------\n")
 
 
 def print_list(object_list, caption):
-    print(("{}:".format(caption)))
+    print("{}:".format(caption))
     print("-------------------------------------------")
     for o in object_list:
-        print(("{}".format(o)))
+        print("{}".format(o))
     print("-------------------------------------------\n")
