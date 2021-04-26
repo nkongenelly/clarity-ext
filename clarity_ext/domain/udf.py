@@ -79,12 +79,15 @@ class DomainObjectWithUdfMixin(DomainObjectMixin):
         if self.name != self.api_resource.name:
             attrib_updates = True
 
+        if self.qc_flag != self.api_resource.qc_flag:
+            attrib_updates = True
         if len(updated_fields) == 0 and not attrib_updates:
             return None
         else:
             for udf_info in updated_fields:
                 new_api_resource.udf[udf_info.key] = udf_info.value
             new_api_resource.name = self.name
+            new_api_resource.qc_flag = self.qc_flag
             return new_api_resource
 
 
