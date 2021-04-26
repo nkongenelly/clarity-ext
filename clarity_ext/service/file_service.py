@@ -206,7 +206,7 @@ class FileService:
         they need to write to.
 
         Returns the full path to the file you're going to write and the artifact to which it should
-        be uploaded. These can be used as arguments to `queue` to queue a file for upload. 
+        be uploaded. These can be used as arguments to `queue` to queue a file for upload.
         """
         artifact = utils.single(
             sorted([shared_file for shared_file in self.artifact_service.shared_files()
@@ -251,17 +251,9 @@ class FileService:
         full_path = os.path.join(self.temp_path, filename)
         # The file needs to be opened in binary form to ensure that Windows
         # line endings are used if specified
-        with self.os_service.open_file(full_path, 'wb') as f:
+        with self.os_service.open_file(full_path, 'w') as f:
             self.logger.debug("Writing output to {}.".format(full_path))
-            # Content should be either a string or something else we can
-            # iterate over, in which case we need newline
-            if isinstance(content, str):
-                try:
-                    f.write(content)
-                except UnicodeEncodeError:
-                    f.write(content.encode("utf-8"))
-            else:
-                raise NotImplementedError("Type not supported")
+            f.write(content)
         return full_path
 
     def list_filenames(self, file_handle):
