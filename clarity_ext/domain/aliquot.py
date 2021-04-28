@@ -34,6 +34,8 @@ class Aliquot(Artifact):
         else:
             self.container = None
         self.is_from_original = False
+        if qc_flag is None:
+            qc_flag = self.QC_FLAG_UNKNOWN
         self.qc_flag = qc_flag
 
     def set_qc_passed(self):

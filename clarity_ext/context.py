@@ -270,6 +270,21 @@ class ExtensionContext(object):
         # commit again.
         self._update_queue.clear()
 
+    def commit_step_log_only(self):
+        log_file_names = self.validation_service.log_file_names
+        self.file_service.commit_selective_files(self.disable_commits, log_file_names)
+        self._update_queue.clear()
+
+    def validate_xml_concordance(self):
+        # Ensure cache is filled
+        self.artifact_service.all_artifacts()
+        error_str = self.step_repo.xml_discordance_string()
+        if len(error_str) > 0:
+            error = ValidationException(error_str, ValidationType.ERROR)
+            self.validation_service.handle_single_validation(error)
+            raise AssertionError('Stateful and stateless xml representations are not equal!'
+                                 'Results are written to step log')
+
     @lazyprop
     def current_process_type(self):
         # TODO: Hang this on the process object

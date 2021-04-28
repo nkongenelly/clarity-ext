@@ -29,6 +29,10 @@ class StepLoggerService(object):
         # TODO: This should be configurable.
         self.NEW_LINE = "\r\n"
 
+    @property
+    def filename_with_extension(self):
+        return '{}.{}'.format(self.filename, self.extension)
+
     @lazyprop
     def step_log(self):
         try:
@@ -103,6 +107,16 @@ class AggregatedStepLoggerService:
         self.step_logger_name = default_step_logger_service.file_handle
         self.warnings_step_logger_service = warnings_step_logger_service
         self.errors_step_logger_service = errors_step_logger_service
+
+    @property
+    def log_file_names(self):
+        names = list()
+        names.append(self.default_step_logger_service.filename_with_extension)
+        if self.warnings_step_logger_service is not None:
+            names.append(self.warnings_step_logger_service.filename_with_extension)
+        if self.errors_step_logger_service is not None:
+            names.append(self.errors_step_logger_service.filename_with_extension)
+        return names
 
     def error(self, msg):
         self.default_step_logger_service.error(msg)

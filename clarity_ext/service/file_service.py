@@ -221,22 +221,39 @@ class FileService:
     def commit(self, disable_commits):
         """Copies files in the upload queue to the server"""
         self.close_local_shared_files()
+        for artifact_id, file_name in self._file_associations:
+            self._commit_file(disable_commits, artifact_id, file_name)
+
+    def commit_selective_files(self, disable_commits, file_names):
+        self.close_local_shared_files()
+        for artifact_id, file_name in self._file_associations:
+            if file_name in file_names:
+                self._commit_file(disable_commits, artifact_id, file_name)
+
+    @property
+    def _file_associations(self):
+        associations = list()
         for artifact_id in self.os_service.listdir(self.upload_queue_path):
             for file_name in self.os_service.listdir(os.path.join(self.upload_queue_path, artifact_id)):
-                if disable_commits:
-                    self.logger.info("Uploading (disabled) file: {}".format(os.path.abspath(file_name)))
+                associations.append((artifact_id, file_name))
+        return associations
+
+    def _commit_file(self, disable_commits, artifact_id, file_name):
+        """Copies files in the upload queue to the server"""
+        if disable_commits:
+            self.logger.info("Uploading (disabled) file: {}".format(os.path.abspath(file_name)))
+        else:
+            artifact = utils.single([shared_file for shared_file in self.artifact_service.shared_files()
+                                     if shared_file.id == artifact_id])
+            local_file = os.path.join(self.upload_queue_path, artifact_id, file_name)
+            self.logger.info("Uploading file {}".format(local_file))
+            try:
+                self.session.api.upload_new_file(artifact.api_resource, local_file)
+            except requests.HTTPError as e:
+                if "UNDER_REVIEW" in str(e):
+                    self.logger.error("Not able to upload step log as some of the samples are in review")
                 else:
-                    artifact = utils.single([shared_file for shared_file in self.artifact_service.shared_files()
-                                             if shared_file.id == artifact_id])
-                    local_file = os.path.join(self.upload_queue_path, artifact_id, file_name)
-                    self.logger.info("Uploading file {}".format(local_file))
-                    try:
-                        self.session.api.upload_new_file(artifact.api_resource, local_file)
-                    except requests.HTTPError as e:
-                        if "UNDER_REVIEW" in str(e):
-                            self.logger.error("Not able to upload step log as some of the samples are in review")
-                        else:
-                            raise e
+                    raise e
 
     def _split_file_name(self, name):
         m = re.match(self.SERVER_FILE_NAME_PATTERN, name)
