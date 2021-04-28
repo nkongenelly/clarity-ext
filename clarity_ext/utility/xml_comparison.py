@@ -28,4 +28,4 @@ class ComparableXml(object):
 
     def tostring(self):
         # Remove all whitespaces in string. Indentation in output cause problems.
-        return re.sub(r'\s+', '', ET.tostring(self.root))
+        return re.sub(r'\s+', '', ET.tostring(self.root, encoding='unicode'))
