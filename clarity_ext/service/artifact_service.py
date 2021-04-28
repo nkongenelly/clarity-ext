@@ -44,8 +44,10 @@ class ArtifactService:
         Returns all aliquots in a step as an artifact pair (input/output)
         """
         pairs = self.all_artifacts()
-        aliquots_only = [pair for pair in pairs if isinstance(pair[0], Aliquot) and
-                               isinstance(pair[1], Aliquot)]
+        aliquots_only = [
+            pair for pair in pairs
+            if isinstance(pair[0], Aliquot) and isinstance(pair[1], Aliquot)
+        ]
         return [ArtifactPair(i, o) for i, o in aliquots_only]
 
     def all_analyte_pairs(self):

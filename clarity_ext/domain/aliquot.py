@@ -10,14 +10,18 @@ class Aliquot(Artifact):
     of the original for example. Or, in the case of ResultFile, only a measurement of the original.
     """
 
+    QC_FLAG_PASSED = 'PASSED'
+    QC_FLAG_FAILED = 'FAILED'
+    QC_FLAG_UNKNOWN = 'UNKNOWN'
+
     def __init__(self, api_resource, is_input, id=None, samples=None, name=None,
-                 well=None, udf_map=None, mapper=None):
+                 well=None, qc_flag=None, udf_map=None, mapper=None):
         super(Aliquot, self).__init__(api_resource=api_resource,
                                       artifact_id=id,
                                       name=name,
                                       udf_map=udf_map,
                                       is_input=is_input,
-                                      mapper=mapper)
+                                      mapper=mapper,)
         # NOTE: This is a quick fix for extremely slow loading of large pools
         if samples:
             self._samples_require_initializing = not isinstance(samples[0], Sample)
@@ -30,6 +34,13 @@ class Aliquot(Artifact):
         else:
             self.container = None
         self.is_from_original = False
+        self.qc_flag = qc_flag
+
+    def set_qc_passed(self):
+        self.qc_flag = self.QC_FLAG_PASSED
+
+    def set_qc_failed(self):
+        self.qc_flag = self.QC_FLAG_FAILED
 
     @property
     def samples(self):
