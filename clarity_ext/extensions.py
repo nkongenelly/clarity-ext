@@ -9,6 +9,7 @@ import clarity_ext.utils as utils
 from abc import ABCMeta, abstractmethod
 import logging
 import difflib
+import traceback
 from clarity_ext.utils import lazyprop
 from clarity_ext import ClaritySession
 from clarity_ext.repository import StepRepository
@@ -280,7 +281,8 @@ class ExtensionService(object):
         except Exception as e:
             # All other unexpected exceptions should also be included in the step log
             # as well as the underlying server log
-            error = ValidationException(str(e), ValidationType.ERROR)
+            msg = '{}\n{}'.format(str(e), traceback.format_exc())
+            error = ValidationException(msg, ValidationType.ERROR)
             context.validation_service.handle_single_validation(error)
             context.commit_step_log_only()
             self._ensure_error_on_instance(instance, e)
