@@ -602,15 +602,33 @@ class SortStrategy:
             # the list starting with an empty string should be sorted first into zip()
             return len(a_list[0])
 
-        strings_in_name = re.split('[-_]*\d+[-_]*', container.name)
-        strings_in_name = list(map(conv_lower, strings_in_name))
-        numbers_in_name = re.split('[-_]*\D+[-_]*', container.name)
-        zip_arg = sorted([numbers_in_name, strings_in_name], key=zip_order)
-        zipped = list(zip(*zip_arg))
-        flatlist = list(chain(*zipped))
-        sortlist_of_strings = [item for item in flatlist if len(item) > 0]
-        sortlist = [container.sort_weight, not container.is_temporary] + list(map(conv_int, sortlist_of_strings))
+        name_sort_array = SortStrategy.create_sort_key_from(container.name)
+        sortlist = [container.sort_weight, not container.is_temporary] + name_sort_array
         return tuple(sortlist)
+
+    @staticmethod
+    def create_sort_key_from(container_name):
+        name_parts = re.split('[-_]+', container_name)
+        name_sort_array = list()
+        for part in name_parts:
+            strings = re.split('\d+', part)
+            numbers = re.split('\D+', part)
+            strings = [s for s in strings if s != '']
+            strings = list(map(lambda x: x.lower(), strings))
+            numbers = [n for n in numbers if n != '']
+            numbers = list(map(lambda x: int(x), numbers))
+            # pad the shortest list
+            if len(strings) > len(numbers):
+                numbers += [0] * (len(strings) - len(numbers))
+
+            if len(numbers) > len(strings):
+                strings += [''] * (len(numbers) - len(strings))
+
+            zipped = list(zip(strings, numbers))
+            flattened = list(chain(*zipped))
+            name_sort_array.extend(flattened)
+
+        return name_sort_array
 
 
 class TubeRackPositioner:

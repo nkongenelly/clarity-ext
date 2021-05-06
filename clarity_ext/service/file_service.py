@@ -268,7 +268,7 @@ class FileService:
         full_path = os.path.join(self.temp_path, filename)
         # The file needs to be opened in binary form to ensure that Windows
         # line endings are used if specified
-        with self.os_service.open_file(full_path, 'w') as f:
+        with self.os_service.open_file(full_path, 'w+') as f:
             self.logger.debug("Writing output to {}.".format(full_path))
             f.write(content)
         return full_path
