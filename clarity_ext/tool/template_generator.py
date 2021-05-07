@@ -94,7 +94,7 @@ class TemplateGenerator(object):
         template_config = os.path.join(base_template.template_dir, "pycharm_config.xml.j2")
 
         with open(template_config, "r") as from_fs:
-            text = codecs.decode(from_fs.read(), "utf-8")
+            text = from_fs.read()
             template = Template(text)
             rendered = template.render(folder_name=module_split_shorter[0],
                                        extension_module=module,
