@@ -602,15 +602,55 @@ class SortStrategy:
             # the list starting with an empty string should be sorted first into zip()
             return len(a_list[0])
 
-        strings_in_name = re.split('[-_]*\d+[-_]*', container.name)
-        strings_in_name = list(map(conv_lower, strings_in_name))
-        numbers_in_name = re.split('[-_]*\D+[-_]*', container.name)
-        zip_arg = sorted([numbers_in_name, strings_in_name], key=zip_order)
-        zipped = list(zip(*zip_arg))
-        flatlist = list(chain(*zipped))
-        sortlist_of_strings = [item for item in flatlist if len(item) > 0]
-        sortlist = [container.sort_weight, not container.is_temporary] + list(map(conv_int, sortlist_of_strings))
-        return tuple(sortlist)
+        name_sort_array = SortStrategy.create_sort_key_from(container.name)
+        return (container.sort_weight, not container.is_temporary) + name_sort_array
+
+    @staticmethod
+    def create_sort_key_from(container_name):
+        """
+        Generates a generic sort key from any container name that follows this pattern:
+
+        * The full name is divided into parts, separated by either `-` or `_` (can be a blend of
+          the two)
+        * For each of these parts, numbers and non-numerical strings are separated. Numbers
+          will be sorted as numbers and non-numerical strings using alphabetic sorting.
+
+        All strings are compared case-insensitive.
+
+        Example:
+
+            24-1234 => ('', 24, '', 1234)
+            ab1_plate3_210505 => ('ab', 1, 'plate', 3, '', 210505)
+
+        Note that if there are two integers within a string part, the results can be unexpected
+        in that the non-numerical part will be ordered first:
+
+            2ab1_plate3-210505 => ('ab', 2, '', 1, 'plate', 3, '', 210505)
+        """
+        name_parts = re.split('[-_]+', container_name)
+        name_sort_array = list()
+        for part in name_parts:
+            strings = re.split('\d+', part)
+            strings = [s for s in strings if s != '']
+            strings = [x.lower() for x in strings]
+
+            numbers = re.split('\D+', part)
+            numbers = [n for n in numbers if n != '']
+            numbers = [int(x) for x in numbers]
+
+
+            # pad the shortest list
+            if len(strings) > len(numbers):
+                numbers += [0] * (len(strings) - len(numbers))
+
+            if len(numbers) > len(strings):
+                strings += [''] * (len(numbers) - len(strings))
+
+            zipped = list(zip(strings, numbers))
+            flattened = list(chain(*zipped))
+            name_sort_array.extend(flattened)
+
+        return tuple(name_sort_array)
 
 
 class TubeRackPositioner:
@@ -1214,7 +1254,7 @@ class TransferRoute(object):
 
 class TransferRouteNode(object):
     """Describes one 'node' in the transfer route
-    
+
     Transfers are described by the SingleTransfer class. But while evaluating handlers, since there may be errors
     during validation and because transfers may be split, we encapsulate each evaluated transfer in the node by a
     TransferRouteNode
