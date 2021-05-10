@@ -440,7 +440,7 @@ class GeneralExtension(object, metaclass=ABCMeta):
     An extension that must implement the `execute` method
     """
 
-    def __init__(self, context, config, extension_svc):
+    def __init__(self, context, config=None, extension_svc=None):
         """
         @type context: clarity_ext.driverfile.DriverFileContext
 
@@ -687,8 +687,8 @@ class SampleSheetExtension(GeneralExtension, metaclass=ABCMeta):
 
     NONE = "<none>"
 
-    def __init__(self, context, config, extension_svc):
-        super(SampleSheetExtension, self).__init__(context, config, extension_svc)
+    def __init__(self, *args, **kwargs):
+        super(SampleSheetExtension, self).__init__(*args, **kwargs)
         self.column_count = 9
 
     def header(self, name):
@@ -719,8 +719,8 @@ class TemplateExtension(DriverFileExtension, metaclass=ABCMeta):
 
     NONE = "<none>"
 
-    def __init__(self, context, config, extension_svc):
-        super(TemplateExtension, self).__init__(context, config, extension_svc)
+    def __init__(self, *args, **kwargs):
+        super(TemplateExtension, self).__init__(*args, **kwargs)
         file_name = sys.modules[self.__module__].__file__
         self.template_dir = os.path.dirname(file_name)
         self.module_name = self.__module__.split(".")[-1]
