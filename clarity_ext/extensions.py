@@ -226,7 +226,7 @@ class ExtensionService(object):
                 raise ValueError("Unexpected run argument type")
             return test
 
-        instance = self._get_extension(module)(None)
+        instance = self._get_extension(module)(None, None, None)
         ret = list(map(parse_run_argument, instance.integration_tests()))
         if require_tests and len(ret) == 0:
             raise NoTestsFoundException()
@@ -248,24 +248,11 @@ class ExtensionService(object):
         module_obj = importlib.import_module(module)
         return getattr(module_obj, "Extension")
 
-    def _run(self, config, path, pid, module, artifacts_to_stdout, disable_context_commit=False, test_mode=False):
-        path = os.path.abspath(path)
-        self.logger.info("Running extension {module} for pid={pid}, test_mode={test_mode}".format(
-            module=module, pid=pid, test_mode=test_mode))
-        self.logger.info(" - Path={}".format(path))
-        extension = self._get_extension(module)
-        old_dir = os.getcwd()
-        os.chdir(path)
-        self.logger.info("Executing at {}".format(path))
-        context = ExtensionContext.create(pid, test_mode=test_mode,
-                                          disable_commits=disable_context_commit,
-                                          uploaded_to_stdout=artifacts_to_stdout)
-        instance = extension(context)
+    def run_instance(self, instance):
+        extension = instance.__class__
+        context = instance.context
         try:
-            context.logger.log("Start running script '{}'".format(module))
             context.validate_xml_concordance()
-            # We add the config in this way (not via __init__) as a quick fix.
-            instance.config = config
             if issubclass(extension, DriverFileExtension):
                 context.file_service.upload(instance.shared_file(), instance.filename(), instance.to_string(),
                                             instance.file_prefix())
@@ -273,7 +260,6 @@ class ExtensionService(object):
                 instance.execute()
             else:
                 raise NotImplementedError("Unknown extension type")
-            context.logger.log("Finished running script '{}'".format(module))
             context.commit()
         except UsageError as e:
             context.commit_step_log_only()
@@ -286,6 +272,25 @@ class ExtensionService(object):
             context.validation_service.handle_single_validation(error)
             context.commit_step_log_only()
             self._ensure_error_on_instance(instance, e)
+
+    def _run(self, config, path, pid, module, artifacts_to_stdout, disable_context_commit=False, test_mode=False):
+        path = os.path.abspath(path)
+        self.logger.info("Running extension {module} for pid={pid}, test_mode={test_mode}".format(
+            module=module, pid=pid, test_mode=test_mode))
+        self.logger.info(" - Path={}".format(path))
+        extension = self._get_extension(module)
+        old_dir = os.getcwd()
+        os.chdir(path)
+        self.logger.info("Executing at {}".format(path))
+        context = ExtensionContext.create(pid, test_mode=test_mode,
+                                          disable_commits=disable_context_commit,
+                                          uploaded_to_stdout=artifacts_to_stdout)
+
+        instance = extension(context, config, self)
+
+        context.logger.log("Start running script '{}'".format(module))
+        self.run_instance(instance)
+        context.logger.log("Finished running script '{}'".format(module))
 
         os.chdir(old_dir)
 
@@ -435,7 +440,7 @@ class GeneralExtension(object, metaclass=ABCMeta):
     An extension that must implement the `execute` method
     """
 
-    def __init__(self, context):
+    def __init__(self, context, config, extension_svc):
         """
         @type context: clarity_ext.driverfile.DriverFileContext
 
@@ -450,6 +455,19 @@ class GeneralExtension(object, metaclass=ABCMeta):
         self.test = IntegrationTest
         self.errors = dict()
         self.warnings = dict()
+        self.config = config
+        self.extension_svc = extension_svc
+
+    def fork(self, cls):
+        """
+        Creates a fork of this extension and executes it. The fork has the same context.
+        """
+        forked_instance = self._create_forked_extension(cls)
+        return self.extension_svc.run_instance(forked_instance)
+
+    def _create_forked_extension(self, fork_cls):
+        fork = fork_cls(self.context, self.config, self.extension_svc)
+        return fork
 
     def usage_warning(self, category, value=None):
         """
@@ -669,8 +687,8 @@ class SampleSheetExtension(GeneralExtension, metaclass=ABCMeta):
 
     NONE = "<none>"
 
-    def __init__(self, context):
-        super(SampleSheetExtension, self).__init__(context)
+    def __init__(self, context, config, extension_svc):
+        super(SampleSheetExtension, self).__init__(context, config, extension_svc)
         self.column_count = 9
 
     def header(self, name):
@@ -701,8 +719,8 @@ class TemplateExtension(DriverFileExtension, metaclass=ABCMeta):
 
     NONE = "<none>"
 
-    def __init__(self, context):
-        super(TemplateExtension, self).__init__(context)
+    def __init__(self, context, config, extension_svc):
+        super(TemplateExtension, self).__init__(context, config, extension_svc)
         file_name = sys.modules[self.__module__].__file__
         self.template_dir = os.path.dirname(file_name)
         self.module_name = self.__module__.split(".")[-1]
