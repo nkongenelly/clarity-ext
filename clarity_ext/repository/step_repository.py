@@ -1,11 +1,10 @@
-from collections import namedtuple
-import xml.etree.ElementTree as ET
-from clarity_ext.utility.xml_comparison import ComparableXml
+from genologics.entities import Artifact as ApiArtifact
 from clarity_ext.domain.artifact import Artifact
 from clarity_ext.domain.shared_result_file import SharedResultFile
 from clarity_ext.repository.container_repository import ContainerRepository
 from clarity_ext.domain.user import User
 from clarity_ext.domain import ProcessType
+from urllib.parse import urlparse
 
 
 class StepRepository(object):
@@ -18,6 +17,11 @@ class StepRepository(object):
     to do that.
     """
 
+    ARTIFACT_FETCH_STRATEGY_USE_URI = 1
+    ARTIFACT_FETCH_STRATEGY_USE_CURRENT_STATE = 2
+    ARTIFACT_FETCH_STRATEGY_USE_POST_PROCESS_URI = 3
+
+
     def __init__(self, session, clarity_mapper):
         """
         Creates a new StepRepository
@@ -26,7 +30,9 @@ class StepRepository(object):
         """
         self.session = session
         self.clarity_mapper = clarity_mapper
-        self.xml_discordance_errors = None
+
+        self._input_strategy = self.ARTIFACT_FETCH_STRATEGY_USE_CURRENT_STATE
+        self._output_strategy = self.ARTIFACT_FETCH_STRATEGY_USE_CURRENT_STATE
 
     def all_artifacts(self):
         """
@@ -45,14 +51,51 @@ class StepRepository(object):
         for simplified use of the API. If optimal performance is required, use the underlying REST API
         instead.
         """
-        input_output_maps = self.session.current_step.api_resource.input_output_maps
-        wrappable_pairs = WrappablePairs(self.session, input_output_maps, WrappablePairs.MODE_STATELESS)
-        # We have to defer raising error until all artifacts are fetched.
-        # Step log is in the artifacts. The errors are to be written into the step log...
-        self.xml_discordance_errors = wrappable_pairs.validate()
 
-        # Artifacts do not contain UDFs that have not been given a value. Since the domain objects returned
-        # must know all UDFs available, we fetch them here:
+        def fetch_entry(strategy, info_object):
+            # NOTE: When fetching step info, artifacts come in a certain state, but this state
+            # is *not* the latest state. In particular, if QC flags have been set by another script
+            # or the user in the UI, we don't see the latest changes. Because of this
+            # we want to fetch using the current state, which you can do by not sending in the
+            # state flag.
+            # Temporarily, we provide two other strategies for this. These are only provided for
+            # debug reasons and should not be altered.
+            if strategy == self.ARTIFACT_FETCH_STRATEGY_USE_URI:
+                return info_object["uri"]
+            elif strategy == self.ARTIFACT_FETCH_STRATEGY_USE_CURRENT_STATE:
+                # The other two strategies fetch using the state flag:
+                # https://lims-dev.snpseq.medsci.uu.se/api/v2/artifacts/2-192121?state=108523
+                # as that's in the input/output map we get from the backend.
+                # Here we remove this state flag
+                overview_entry = info_object["uri"]
+
+                parsed = urlparse(overview_entry.uri)
+                current_state_uri = "{}://{}{}".format(parsed.scheme, parsed.netloc, parsed.path)
+                return ApiArtifact(overview_entry.lims, uri=current_state_uri)
+            elif strategy == self.ARTIFACT_FETCH_STRATEGY_USE_POST_PROCESS_URI:
+                return info_object["post-process-uri"]
+
+        def fetch_input(info_object):
+            return fetch_entry(self._input_strategy, info_object)
+
+        def fetch_output(info_object):
+            return fetch_entry(self._output_strategy, info_object)
+
+        input_output_maps = self.session.current_step.api_resource.input_output_maps
+
+        artifact_keys = set()
+
+        for input_info, output_info in input_output_maps:
+            artifact_keys.add(fetch_input(input_info))
+            artifact_keys.add(fetch_output(output_info))
+
+        artifacts = self.session.api.get_batch(artifact_keys)
+
+        artifacts_by_uri = {artifact.uri: artifact for artifact in artifacts}
+
+
+        # Artifacts do not contain UDFs that have not been given a value. Since the domain
+        # objects returned must know all UDFs available, we fetch them here:
         # TODO: Move this to the service
         process_type = self.get_process_type()
 
@@ -63,35 +106,36 @@ class StepRepository(object):
         # that we create only one artifact domain object in this case:
         outputs_by_id = dict()
         container_repo = ContainerRepository()
-        for raw_input, raw_output, output_generation_type in wrappable_pairs:
-            input, output = self._wrap_input_output(
-                raw_input,
-                raw_output,
-                container_repo,
-                process_type,
-                output_generation_type
-            )
 
-            if output.id in outputs_by_id:
-                output = outputs_by_id[output.id]
-            ret.append((input, output))
-            outputs_by_id[output.id] = output
+        for input_info, output_info in input_output_maps:
+            input_resource = artifacts_by_uri[fetch_input(input_info).uri]
+            output_resource = artifacts_by_uri[fetch_output(output_info).uri]
+            output_gen_type = output_info["output-generation-type"]
+
+            input_domain_obj, output_domain_obj = self._wrap_input_output(
+                    input_resource,
+                    output_resource,
+                    output_gen_type,
+                    container_repo,
+                    process_type)
+            if output_domain_obj.id in outputs_by_id:
+                output_domain_obj = outputs_by_id[output_domain_obj.id]
+            ret.append((input_domain_obj, output_domain_obj))
+            outputs_by_id[output_domain_obj.id] = output_domain_obj
         return ret
 
-    def xml_discordance_string(self):
-        lst = list()
-        for e in self.xml_discordance_errors:
-            lst.append(str(e))
-        return '\n'.join(lst)
-
-    def _wrap_input_output(self, input_resource, output_resource, container_repo,
-                           process_type, output_generation_type):
-
+    def _wrap_input_output(self,
+            input_resource,
+            output_resource,
+            output_gen_type,
+            container_repo,
+            process_type):
         # Create a map of all containers, so we can fill in it while building
         # domain objects.
 
         # Create a fresh container repository. Then we know that only one container
         # will be created for each object in a call to this method
+
         input = self._wrap_artifact(
             input_resource,
             container_repo,
@@ -174,173 +218,3 @@ class StepRepository(object):
     def get_process(self):
         """Returns the currently running process (step)"""
         return self.session.current_step
-
-
-class WrappablePairs(object):
-    """
-    Contains all artifact pairs within a step, containing genologics Artifact instances
-    These are in turn ready to be wrapped into clarity-ext domain instances
-    Usage:
-    wrappable_pairs = WrappablePairs(session, input_output_maps, mode=<stateful | stateless>)
-    wrappable_pairs.validate()  # compares xml for stateful and stateless
-    for input, output, output_generation_type in wrappable_pairs:
-        input  # genologics Artifact, either stateful or stateless
-        output  # genologics Artifact
-
-    The validation compares the stateless and stateful xml representation,
-    and discards any discrepancies in the qc-flag
-    """
-
-    MODE_STATELESS = "stateless"
-    MODE_STATEFUL = "stateful"
-
-    def __init__(self, session, input_output_maps, state_mode):
-        # Note, the force flag should be set to False as soon as the test period is over!
-        # Develop-1177
-        self.force = True
-        self.session = session
-        self.input_output_maps = input_output_maps
-        self.state_mode = state_mode
-        self.pairs = list()
-        stateful_artifacts = self._fetch_stateful()
-        stateless_artifacts = self._fetch_stateless()
-
-        self.pairs = self._assemble_pairs(stateful_artifacts, stateless_artifacts)
-
-    def validate(self):
-        errors = list()
-        for pair in self.pairs:
-            errors.extend(pair.validate(self.session.api))
-        return errors
-
-    def __iter__(self):
-        self.counter = 0
-        return self
-
-    def next(self):
-        return self.__next__()
-
-    def __next__(self):
-        if self.counter == len(self.pairs):
-            raise StopIteration
-        pair = self.pairs[self.counter]
-        self.counter += 1
-        return iter((pair.input_artifact, pair.output_artifact, pair.output_generation_type))
-
-    def _assemble_pairs(self, stateful_artifacts, stateless_artifacts):
-        pairs = list()
-        stateful_by_uri = {artifact.uri: artifact for artifact in stateful_artifacts}
-        stateless_by_lims_id = {artifact.id: artifact for artifact in stateless_artifacts}
-        for input, output in self.input_output_maps:
-            stateful_input = stateful_by_uri[input["uri"].uri]
-            fetched_input = ArtifactRepresentation(
-                stateful_representation=stateful_input,
-                stateless_representation=stateless_by_lims_id[stateful_input.id]
-            )
-            stateful_output = stateful_by_uri[output["uri"].uri]
-            fetched_output = ArtifactRepresentation(
-                stateful_representation=stateful_output,
-                stateless_representation=stateless_by_lims_id[stateful_output.id]
-            )
-            pair = Pair(
-                input=fetched_input,
-                output=fetched_output,
-                output_generation_type=output["output-generation-type"],
-                state_mode=self.state_mode
-            )
-            pairs.append(pair)
-
-        return pairs
-
-    def _fetch_stateful(self):
-        artifact_keys = set()
-        for input, output in self.input_output_maps:
-            artifact_keys.add(input["uri"])
-            artifact_keys.add(output["uri"])
-
-        return self.session.api.get_batch(artifact_keys, force=self.force)
-
-    def _fetch_stateless(self):
-        artifact_keys = set()
-        for input, output in self.input_output_maps:
-            stateless_input = input["uri"].get_stateless_clone()
-            stateless_output = output["uri"].get_stateless_clone()
-            artifact_keys.add(stateless_input)
-            artifact_keys.add(stateless_output)
-
-        return self.session.api.get_batch(artifact_keys, force=self.force)
-
-
-class Pair(namedtuple('Pair', ['input', 'output', 'output_generation_type', 'state_mode'])):
-    @property
-    def input_artifact(self):
-        return self._get_artifact(self.input)
-
-    @property
-    def output_artifact(self):
-        return self._get_artifact(self.output)
-
-    def _get_artifact(self, artifact_repr):
-        if self.state_mode == WrappablePairs.MODE_STATEFUL:
-            return artifact_repr.stateful_representation
-        elif self.state_mode == WrappablePairs.MODE_STATELESS:
-            return artifact_repr.stateless_representation
-        else:
-            raise Exception("Unknown state: {}".format(self.state_mode))
-
-    def validate(self, api):
-        errors = list()
-        if not self._is_equal(
-                self.input.stateless_representation,
-                self.input.stateful_representation,
-                exclude_tag='qc-flag'
-        ):
-            errors.append(XmlDiscordanceError(
-                self.input.stateless_representation,
-                self.input.stateful_representation
-            ))
-
-        if not self._is_equal(
-            self.output.stateless_representation,
-            self.output.stateful_representation,
-            exclude_tag='qc-flag'
-        ):
-            errors.append(XmlDiscordanceError(
-                self.output.stateless_representation,
-                self.output.stateful_representation
-            ))
-        return errors
-
-    def _is_equal(self, entity1, entity2, exclude_tag=None):
-        c1 = ComparableXml(ET.tostring(entity1.root), exclude_tag=exclude_tag)
-        c2 = ComparableXml(ET.tostring(entity2.root), exclude_tag=exclude_tag)
-        return c1.tostring() == c2.tostring()
-
-
-class XmlDiscordanceError(Exception):
-    def __init__(self, stateless_representation, stateful_representation):
-        self.stateless_representation = stateless_representation
-        self.stateful_representation = stateful_representation
-
-    def __repr__(self):
-        return "{}\n{}\n{}\n{}\n\n".format(
-            'stateless xml:',
-            ET.tostring(self.stateless_representation.root),
-            '(should match) stateful xml:',
-            ET.tostring(self.stateful_representation.root),
-        )
-
-    def __str__(self):
-        return self.__repr__()
-
-
-class ArtifactRepresentation(object):
-    """
-    ArtifactRepresentation contains both the stateless and the statefull
-    representation of the same Artifact.
-
-    A validation makes sure there is no discrepancies apart from the qc-flag
-    """
-    def __init__(self, stateless_representation=None, stateful_representation=None):
-        self.stateless_representation = stateless_representation
-        self.stateful_representation = stateful_representation

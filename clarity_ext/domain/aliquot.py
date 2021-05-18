@@ -21,7 +21,7 @@ class Aliquot(Artifact):
                                       name=name,
                                       udf_map=udf_map,
                                       is_input=is_input,
-                                      mapper=mapper,)
+                                      mapper=mapper)
         # NOTE: This is a quick fix for extremely slow loading of large pools
         if samples:
             self._samples_require_initializing = not isinstance(samples[0], Sample)
@@ -34,9 +34,12 @@ class Aliquot(Artifact):
         else:
             self.container = None
         self.is_from_original = False
-        if qc_flag is None:
-            qc_flag = self.QC_FLAG_UNKNOWN
-        self.qc_flag = qc_flag
+
+        self.qc_flag = qc_flag if qc_flag else self.QC_FLAG_UNKNOWN
+
+    @property
+    def passed(self):
+        return self.qc_flag == self.QC_FLAG_PASSED
 
     def set_qc_passed(self):
         self.qc_flag = self.QC_FLAG_PASSED
