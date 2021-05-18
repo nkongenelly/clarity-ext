@@ -47,6 +47,8 @@ class ClarityMapper(object):
         return self.map[domain_object]
 
     def sample_create_object(self, resource):
+        # from clarity_ext.utils import pretty_print
+        # pretty_print(resource)
         project = Project(resource.project.name) if resource.project else None
         udf_map = UdfMapping(resource.udf)
         sample = Sample(resource.id,
@@ -107,9 +109,7 @@ class ClarityMapper(object):
             udfs = resource.udf
 
         udf_map = UdfMapping(udfs)
-
         well = self.well_create_object(resource, container_repo, is_input)
-
         is_control = self._is_control(resource)
         # TODO: A better way to decide if analyte is output of a previous step?
         is_from_original = (resource.id.find("2-") != 0)
