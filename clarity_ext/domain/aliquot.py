@@ -15,17 +15,13 @@ class Aliquot(Artifact):
     QC_FLAG_UNKNOWN = 'UNKNOWN'
 
     def __init__(self, api_resource, is_input, id=None, samples=None, name=None,
-                 well=None, qc_flag=None, udf_map=None, mapper=None):
+                 well=None, qc_flag=None, udf_map=None, mapper=None, sample_repo=None):
         super(Aliquot, self).__init__(api_resource=api_resource,
                                       artifact_id=id,
                                       name=name,
                                       udf_map=udf_map,
                                       is_input=is_input,
-                                      mapper=mapper)
-        # NOTE: This is a quick fix for extremely slow loading of large pools
-        if samples:
-            self._samples_require_initializing = not isinstance(samples[0], Sample)
-        self._samples = samples
+                                      mapper=mapper,)
 
         self.well = well
         if well:
@@ -34,8 +30,15 @@ class Aliquot(Artifact):
         else:
             self.container = None
         self.is_from_original = False
-
         self.qc_flag = qc_flag if qc_flag else self.QC_FLAG_UNKNOWN
+        self._sample_repo = sample_repo
+        self._samples = None
+        self._sample_resources = samples or list()
+        self._init_samples()
+
+    def _init_samples(self):
+        for sample_resource in self._sample_resources:
+            self._sample_repo.add_candidate(sample_resource)
 
     @property
     def passed(self):
@@ -49,22 +52,16 @@ class Aliquot(Artifact):
 
     @property
     def samples(self):
-        if self._samples_require_initializing:
-            self._samples = [self._mapper.sample_create_object(sample)
-                             for sample in self._samples]
-            self._samples_require_initializing = False
+        if self._samples is None:
+            self._samples = self._sample_repo.get_samples(self._sample_resources)
         return self._samples
-
-    @samples.setter
-    def samples(self, value):
-        self._samples = value
 
     @property
     def is_pool(self):
         if self._samples is None:
             # TODO: Happens only in a test, fix that...
             return False
-        return len(self._samples) > 1
+        return len(self._sample_resources) > 1
 
 
 class Sample(DomainObjectWithUdf):
@@ -87,5 +84,6 @@ class Sample(DomainObjectWithUdf):
 
 
 class Project(DomainObjectWithUdf):
-    def __init__(self, name):
+    def __init__(self, name, udf_map=None):
+        super().__init__(udf_map=udf_map)
         self.name = name

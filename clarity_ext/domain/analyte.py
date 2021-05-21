@@ -1,7 +1,6 @@
-from clarity_ext.domain.aliquot import Aliquot, Sample
+from clarity_ext.domain.aliquot import Aliquot
 from clarity_ext.domain.artifact import Artifact
 from clarity_ext import utils
-from clarity_ext.domain.udf import UdfMapping
 
 
 class Analyte(Aliquot):
@@ -23,7 +22,8 @@ class Analyte(Aliquot):
                  is_control=False,
                  udf_map=None,
                  is_from_original=None,
-                 mapper=None):
+                 mapper=None,
+                 sample_repo=None):
         """
         Creates an analyte
         """
@@ -35,7 +35,8 @@ class Analyte(Aliquot):
                                              well=well,
                                              qc_flag=qc_flag,
                                              udf_map=udf_map,
-                                             mapper=mapper)
+                                             mapper=mapper,
+                                             sample_repo=sample_repo)
         self.is_control = is_control
         self.is_output_from_previous = is_from_original
         self.reagent_labels = None

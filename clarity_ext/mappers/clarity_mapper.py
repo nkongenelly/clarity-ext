@@ -82,7 +82,7 @@ class ClarityMapper(object):
                 resource.udf[udf_info.key] = udf_info.value
             return resource
 
-    def analyte_create_object(self, resource, is_input, container_repo, process_type):
+    def analyte_create_object(self, resource, is_input, container_repo, process_type, sample_repo):
         """
         Creates an Analyte from the rest resource. By default, the container
         is created from the related container resource, except if one
@@ -123,7 +123,8 @@ class ClarityMapper(object):
                           is_control=is_control,
                           udf_map=udf_map,
                           is_from_original=is_from_original,
-                          mapper=self)
+                          mapper=self,
+                          sample_repo=sample_repo)
         analyte.api_resource = resource
         self._after_object_created(analyte, resource)
         self.domain_map[resource.id] = analyte
