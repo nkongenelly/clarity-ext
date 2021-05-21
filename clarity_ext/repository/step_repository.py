@@ -127,7 +127,7 @@ class StepRepository(object):
     def _wrap_input_output(self,
             input_resource,
             output_resource,
-            output_gen_type,
+            output_generation_type,
             container_repo,
             process_type):
         # Create a map of all containers, so we can fill in it while building
