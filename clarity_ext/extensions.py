@@ -252,7 +252,6 @@ class ExtensionService(object):
         extension = instance.__class__
         context = instance.context
         try:
-            context.validate_xml_concordance()
             if issubclass(extension, DriverFileExtension):
                 context.file_service.upload(instance.shared_file(), instance.filename(), instance.to_string(),
                                             instance.file_prefix())

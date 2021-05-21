@@ -119,6 +119,7 @@ class ClarityMapper(object):
                           samples=resource.samples,
                           name=resource.name,
                           well=well,
+                          qc_flag=resource.qc_flag,
                           is_control=is_control,
                           udf_map=udf_map,
                           is_from_original=is_from_original,
