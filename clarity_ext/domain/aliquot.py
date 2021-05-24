@@ -1,5 +1,6 @@
 from clarity_ext.domain.artifact import Artifact
 from clarity_ext.domain.udf import DomainObjectWithUdf
+from clarity_ext.inversion_of_control.ioc import ioc
 
 
 class Aliquot(Artifact):
@@ -15,7 +16,7 @@ class Aliquot(Artifact):
     QC_FLAG_UNKNOWN = 'UNKNOWN'
 
     def __init__(self, api_resource, is_input, id=None, samples=None, name=None,
-                 well=None, qc_flag=None, udf_map=None, mapper=None, sample_repo=None):
+                 well=None, qc_flag=None, udf_map=None, mapper=None):
         super(Aliquot, self).__init__(api_resource=api_resource,
                                       artifact_id=id,
                                       name=name,
@@ -31,14 +32,13 @@ class Aliquot(Artifact):
             self.container = None
         self.is_from_original = False
         self.qc_flag = qc_flag if qc_flag else self.QC_FLAG_UNKNOWN
-        self._sample_repo = sample_repo
         self._samples = None
         self._sample_resources = samples or list()
         self._init_samples()
 
     def _init_samples(self):
         for sample_resource in self._sample_resources:
-            self._sample_repo.add_candidate(sample_resource)
+            ioc.app.sample_repository.add_candidate(sample_resource)
 
     @property
     def passed(self):
@@ -53,7 +53,7 @@ class Aliquot(Artifact):
     @property
     def samples(self):
         if self._samples is None:
-            self._samples = self._sample_repo.get_samples(self._sample_resources)
+            self._samples = ioc.app.sample_repository.get_samples(self._sample_resources)
         return self._samples
 
     @property
