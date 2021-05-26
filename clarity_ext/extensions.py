@@ -17,6 +17,7 @@ from clarity_ext.service import ArtifactService, FileService
 from clarity_ext.utility.integration_test_service import IntegrationTest
 from clarity_ext.service.dilution.index_generation import ConfigValidator
 from clarity_ext.service.dilution.index_generation import ConfigParser
+from clarity_ext.service.step_logger_service import StepLoggerService
 from clarity_ext.domain.validation import ValidationException
 from clarity_ext.domain.validation import ValidationType
 from jinja2 import Template
@@ -467,6 +468,18 @@ class GeneralExtension(object, metaclass=ABCMeta):
     def _create_forked_extension(self, fork_cls):
         fork = fork_cls(self.context, self.config, self.extension_svc)
         return fork
+
+    def init_warnings_and_errors_log(self):
+        """
+        This may only be initialized if the current step is configured with
+        separate warnings and errors log files
+        """
+        warning_step_log = StepLoggerService('Step log', self.context.file_service, extension='txt',
+                                             filename='Warnings', raise_if_not_found=True)
+        self.context.validation_service.add_separate_warning_step_log(warning_step_log)
+        errors_step_log = StepLoggerService('Step log', self.context.file_service, extension='txt',
+                                            filename='Errors', raise_if_not_found=True)
+        self.context.validation_service.add_separate_error_step_log(errors_step_log)
 
     def usage_warning(self, category, value=None):
         """

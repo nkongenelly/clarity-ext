@@ -11,7 +11,6 @@ class RoutingService(object):
         self.session = session
         self.commit = commit
 
-
     def build_plan(self, artifact_ids, assign_workflow_name, assign_stage_name):
         plan = dict()
         errors_entry = list()
