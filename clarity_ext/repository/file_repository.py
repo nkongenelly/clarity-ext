@@ -28,9 +28,9 @@ class FileRepository:
         with open(local_path, 'rb') as f:
             byte_contents = f.read()
 
-        dammit = UnicodeDammit(byte_contents, ['uft-8', 'latin-1'])
+        dammit = UnicodeDammit(byte_contents, ['utf-8', 'latin-1'])
         if len(byte_contents) > 0 and \
                 (not dammit.original_encoding or not dammit.unicode_markup):
             raise UnicodeError("Failed to detect encoding for this file.")
-        encoding = dammit.unicode_markup or 'utf-8'
+        encoding = dammit.original_encoding or 'utf-8'
         return open(local_path, mode, encoding=encoding)
