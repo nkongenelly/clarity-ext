@@ -1,3 +1,6 @@
+from bs4 import UnicodeDammit
+
+
 class FileRepository:
     """
     Handles remote and local file access.
@@ -22,4 +25,10 @@ class FileRepository:
         Provided for being able to test with dependency injection instead of patching open.
         Services will always use this way of opening files.
         """
-        return open(local_path, mode)
+        with open(local_path, 'rb') as f:
+            byte_contents = f.read()
+
+        dammit = UnicodeDammit(byte_contents, ['uft-8', 'latin-1'])
+        if not dammit.original_encoding or not dammit.unicode_markup:
+            raise UnicodeError("Failed to detect encoding for this file.")
+        return open(local_path, mode, encoding=dammit.original_encoding)
