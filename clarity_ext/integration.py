@@ -102,7 +102,7 @@ class IntegrationTestService(object):
             except Exception as e:
                 # It's OK to use a catch-all exception handler here since this is only used while
                 # running tests, so we want to be optimistic and try to run all tests:
-                print("- {}: ERROR - {}".format(module, e.message))
+                print("- {}: ERROR - {}".format(module, e))
                 print("  Fresh run:    clarity-ext extension {} test-fresh".format(module))
                 print("  Review, then: clarity-ext extension {} freeze".format(module))
                 exception_count += 1
