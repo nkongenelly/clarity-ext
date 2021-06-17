@@ -772,9 +772,7 @@ class TemplateExtension(DriverFileExtension, metaclass=ABCMeta):
     def content(self):
         with open(self.template_path, 'r') as fs:
             text = fs.read()
-            windows_eol = '\r\n'
-            newline_sequence = windows_eol if windows_eol in text else '\n'
-            template = Template(text, newline_sequence=newline_sequence)
+            template = Template(text, newline_sequence=self.newline())
             rendered = template.render(ext=self)
             return rendered
 
