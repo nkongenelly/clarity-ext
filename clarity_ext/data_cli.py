@@ -83,7 +83,7 @@ def get_stages(workflow_status, workflow_name, protocol_name, stage_name, use_ca
             try:
                 print("\t".join([stage.workflow.name, stage.protocol.name, stage.name, stage.uri]))
             except AttributeError as e:
-                print("# ERROR workflow={}: {}".format(workflow.uri, e.message))
+                print("# ERROR workflow={}: {}".format(workflow.uri, e))
 
 
 @main.command("move-artifacts-plan")

@@ -121,7 +121,7 @@ def extension(module, mode, args, cache):
             try:
                 extension_svc.run_test(config, args, module, True, cache, validate_against_frozen)
             except ResultsDifferFromFrozenData as ex:
-                print("Results differ from frozen data: " + ex.message)
+                print("Results differ from frozen data: " + str(ex))
         elif mode == ExtensionService.RUN_MODE_EXEC:
             extension_svc.set_log_strategy(log_level, False, True, True, "/opt/clarity-ext/logs", "extensions.log")
             extension_svc.run_exec(config, args, module)
@@ -132,7 +132,7 @@ def extension(module, mode, args, cache):
             # Just re-raise when testing - to keep the stacktrace
             raise
         logger.exception("Exception while running extension")
-        msg = "There was an exception while running the extension: '{}'. ".format(ex.message) + \
+        msg = "There was an exception while running the extension: '{}'. ".format(ex) + \
               "Refer to the file 'Step log' if available."
         if extension_svc.rotating_file_path:
             msg += " The application log is available in {}.".format(extension_svc.rotating_file_path)
