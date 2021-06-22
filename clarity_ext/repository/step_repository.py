@@ -116,7 +116,6 @@ class StepRepository(object):
                     input_resource,
                     output_resource,
                     output_gen_type,
-                    container_repo,
                     process_type)
             if output_domain_obj.id in outputs_by_id:
                 output_domain_obj = outputs_by_id[output_domain_obj.id]
@@ -124,11 +123,9 @@ class StepRepository(object):
             outputs_by_id[output_domain_obj.id] = output_domain_obj
         return ret
 
-    def _wrap_input_output(self,
-            input_resource,
-            output_resource,
-            output_generation_type,
-            process_type):
+    def _wrap_input_output(
+            self, input_resource, output_resource,
+            output_generation_type,process_type):
         # Create a map of all containers, so we can fill in it while building
         # domain objects.
 
