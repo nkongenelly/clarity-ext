@@ -9,13 +9,14 @@ logger = logging.getLogger(__name__)
 # map (since we're not adding the udfs to the object, or add them to the object)
 class DomainObjectWithUdf(DomainObject):
     def __init__(self, api_resource=None, id=None, udf_map=None):
+        super().__init__(id)
+
         # NOTE: The udf_map must be the first object set,
         # since it's used in __getattr__ and __setattr__
         if udf_map is None:
             udf_map = UdfMapping()
         self.udf_map = udf_map
         self.api_resource = api_resource
-        self.id = id
 
     def __getattr__(self, key):
         """Getter that supports access to the extra udf_ attributes"""

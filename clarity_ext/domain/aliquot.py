@@ -77,8 +77,7 @@ class Sample(DomainObjectWithUdf):
         :param udf_map: An UdfMapping
         :param mapper: The ClarityMapper
         """
-        super(Sample, self).__init__(udf_map=udf_map)
-        self.id = sample_id
+        super(Sample, self).__init__(udf_map=udf_map, id=sample_id)
         self.name = name
         self.project = project
         self._mapper = mapper
