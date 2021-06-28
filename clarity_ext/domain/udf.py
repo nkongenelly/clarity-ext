@@ -1,5 +1,5 @@
 import re
-from clarity_ext.domain.common import DomainObjectMixin
+from clarity_ext.domain.common import DomainObject
 import logging
 
 logger = logging.getLogger(__name__)
@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 # TODO: Ensure that this overrides the equality check too, to take into account the UDF
 # map (since we're not adding the udfs to the object, or add them to the object)
-class DomainObjectWithUdfMixin(DomainObjectMixin):
+class DomainObjectWithUdf(DomainObject):
     def __init__(self, api_resource=None, id=None, udf_map=None):
         # NOTE: The udf_map must be the first object set,
         # since it's used in __getattr__ and __setattr__
@@ -39,7 +39,7 @@ class DomainObjectWithUdfMixin(DomainObjectMixin):
             else:
                 raise self._create_udf_exception(key)
         else:
-            super(DomainObjectWithUdfMixin, self).__setattr__(key, value)
+            super(DomainObjectWithUdf, self).__setattr__(key, value)
 
     def __hash__(self):
         return hash(self.id)

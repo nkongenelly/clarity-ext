@@ -2,7 +2,7 @@ from builtins import isinstance
 import copy
 
 
-class DomainObjectMixin(object):
+class DomainObject(object):
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -17,9 +17,9 @@ class DomainObjectMixin(object):
         http://stackoverflow.com/questions/31415844/using-the-operator-on-circularly-defined-dictionaries
         """
         cache = cache + [a, b]
-        if isinstance(a, DomainObjectMixin):
+        if isinstance(a, DomainObject):
             a = a.__dict__
-        if isinstance(b, DomainObjectMixin):
+        if isinstance(b, DomainObject):
             b = b.__dict__
         if not isinstance(a, dict) or not isinstance(b, dict):
             return a == b
@@ -55,7 +55,7 @@ class DomainObjectMixin(object):
             return None
 
 
-class AssignLogger(DomainObjectMixin):
+class AssignLogger(DomainObject):
     def __init__(self, domain_object_mixin):
         self.log = []
         self.domain_object_mixin = domain_object_mixin

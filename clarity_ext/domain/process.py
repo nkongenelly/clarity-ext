@@ -1,7 +1,7 @@
-from clarity_ext.domain.udf import DomainObjectWithUdfMixin, UdfMapping
+from clarity_ext.domain.udf import DomainObjectWithUdf, UdfMapping
 
 
-class Process(DomainObjectWithUdfMixin):
+class Process(DomainObjectWithUdf):
     """Represents a Process (step)"""
 
     def __init__(self, api_resource, process_id, technician, udf_map, ui_link, instrument=None):
