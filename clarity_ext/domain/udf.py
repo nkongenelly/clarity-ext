@@ -207,7 +207,7 @@ class UdfMapping(object):
         """
         new_name = original_udf_name.lower().replace(" ", "_")
         # Get rid of all non-alphanumeric characters
-        new_name = re.sub("\W+", "", new_name)
+        new_name = re.sub(r"\W+", "", new_name)
         new_name = "udf_{}".format(new_name)
         # Now ensure that we don't have repeated undercores:
         new_name = re.sub("_{2,}", "_", new_name)

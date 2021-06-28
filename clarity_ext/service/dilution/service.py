@@ -4,11 +4,11 @@ import logging
 import re
 from itertools import groupby
 from itertools import chain
-import collections
+import collections.abc
 from collections import namedtuple
 from abc import abstractmethod
 from clarity_ext.service.file_service import Csv
-from clarity_ext.domain.validation import ValidationException, ValidationType, ValidationResults, UsageError
+from clarity_ext.domain.validation import ValidationException, ValidationType, ValidationResults
 from clarity_ext import utils
 from clarity_ext.domain import Container, Well
 from clarity_ext.domain.container import PlateSize
@@ -84,7 +84,7 @@ class DilutionSession(object):
         """
         transfer_handlers = list()
         for transfer_handler_type in transfer_handler_types:
-            if isinstance(transfer_handler_type, collections.Iterable):
+            if isinstance(transfer_handler_type, collections.abc.Iterable):
                 initialized = [t(self, dilution_settings, robot_settings, virtual_batch)
                                for t in transfer_handler_type]
                 transfer_handlers.append(OrTransferHandler(self, dilution_settings, robot_settings,
@@ -630,11 +630,11 @@ class SortStrategy:
         name_parts = re.split('[-_]+', container_name)
         name_sort_array = list()
         for part in name_parts:
-            strings = re.split('\d+', part)
+            strings = re.split(r'\d+', part)
             strings = [s for s in strings if s != '']
             strings = [x.lower() for x in strings]
 
-            numbers = re.split('\D+', part)
+            numbers = re.split(r'\D+', part)
             numbers = [n for n in numbers if n != '']
             numbers = [int(x) for x in numbers]
 
