@@ -10,29 +10,6 @@ class DomainObjectMixin(object):
         else:
             return False
 
-    def __hash__(self):
-        return hash(self.id)
-
-    def __lt__(self, other):
-        return self.compare(other) < 0
-
-    def __gt__(self, other):
-        return self.compare(other) > 0
-
-    def __le__(self, other):
-        return self.compare(other) <= 0
-
-    def __ge__(self, other):
-        return self.compare(other) >= 0
-
-    def compare(self, other):
-        # Override if needed
-        if self._eq_rec(self, other) == 0:
-            return 0
-        elif str(self) < str(other):
-            return -1
-        return 1
-
     def _eq_rec(self, a, b, cache=[]):
         """
         Replaces the == operator because of circulating references (e.g. analyte <-> well)
