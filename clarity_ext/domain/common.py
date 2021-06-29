@@ -2,7 +2,9 @@ from builtins import isinstance
 import copy
 
 
-class DomainObjectMixin(object):
+class DomainObject(object):
+    def __init__(self, id):
+        self.id = id
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -10,28 +12,8 @@ class DomainObjectMixin(object):
         else:
             return False
 
-    def __hash__(self):
-        return hash(self.id)
-
     def __lt__(self, other):
-        return self.compare(other) < 0
-
-    def __gt__(self, other):
-        return self.compare(other) > 0
-
-    def __le__(self, other):
-        return self.compare(other) <= 0
-
-    def __ge__(self, other):
-        return self.compare(other) >= 0
-
-    def compare(self, other):
-        # Override if needed
-        if self._eq_rec(self, other) == 0:
-            return 0
-        elif str(self) < str(other):
-            return -1
-        return 1
+        return self.id < other.id
 
     def _eq_rec(self, a, b, cache=[]):
         """
@@ -40,9 +22,9 @@ class DomainObjectMixin(object):
         http://stackoverflow.com/questions/31415844/using-the-operator-on-circularly-defined-dictionaries
         """
         cache = cache + [a, b]
-        if isinstance(a, DomainObjectMixin):
+        if isinstance(a, DomainObject):
             a = a.__dict__
-        if isinstance(b, DomainObjectMixin):
+        if isinstance(b, DomainObject):
             b = b.__dict__
         if not isinstance(a, dict) or not isinstance(b, dict):
             return a == b
@@ -78,7 +60,7 @@ class DomainObjectMixin(object):
             return None
 
 
-class AssignLogger(DomainObjectMixin):
+class AssignLogger(DomainObject):
     def __init__(self, domain_object_mixin):
         self.log = []
         self.domain_object_mixin = domain_object_mixin

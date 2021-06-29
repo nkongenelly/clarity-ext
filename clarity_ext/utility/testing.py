@@ -223,7 +223,7 @@ class TestExtensionContext(object):
         self._analytes.extend((pair.input_artifact, pair.output_artifact) for pair in pairs)
 
 
-class TestExtensionWrapper(object):
+class ExtensionWrapperForTests(object):
     """Similar to TestExtensionContext, but wraps an entire extension"""
 
     def __init__(self, extension_type):

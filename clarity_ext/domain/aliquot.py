@@ -1,5 +1,5 @@
 from clarity_ext.domain.artifact import Artifact
-from clarity_ext.domain.udf import DomainObjectWithUdfMixin
+from clarity_ext.domain.udf import DomainObjectWithUdf
 
 
 class Aliquot(Artifact):
@@ -67,7 +67,7 @@ class Aliquot(Artifact):
         return len(self._samples) > 1
 
 
-class Sample(DomainObjectWithUdfMixin):
+class Sample(DomainObjectWithUdf):
 
     def __init__(self, sample_id, name, project, udf_map=None, mapper=None):
         """
@@ -77,8 +77,7 @@ class Sample(DomainObjectWithUdfMixin):
         :param udf_map: An UdfMapping
         :param mapper: The ClarityMapper
         """
-        super(Sample, self).__init__(udf_map=udf_map)
-        self.id = sample_id
+        super(Sample, self).__init__(udf_map=udf_map, id=sample_id)
         self.name = name
         self.project = project
         self._mapper = mapper
@@ -87,6 +86,6 @@ class Sample(DomainObjectWithUdfMixin):
         return "<Sample id={}>".format(self.id)
 
 
-class Project(DomainObjectWithUdfMixin):
+class Project(DomainObjectWithUdf):
     def __init__(self, name):
         self.name = name
