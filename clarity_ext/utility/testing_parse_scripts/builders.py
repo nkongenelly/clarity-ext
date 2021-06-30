@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from mock import MagicMock
 from io import StringIO
 from io import BytesIO
@@ -23,7 +25,7 @@ class ContextBuilder:
     Handle repositories held by context
     E.g. shared files, artifacts, analytes.
     """
-    def __init__(self, fake_step_repo_builder=None):
+    def __init__(self, fake_step_repo_builder=None, current_user=None):
         # Insert fake_step_repo_builder if there are step udfs
         self.fake_step_repo_builder = fake_step_repo_builder or FakeStepRepoBuilder()
         self.fake_step_repo_builder.create()
@@ -37,6 +39,7 @@ class ContextBuilder:
         self.validation_service = ValidationService(step_logger_service)
         self.context = None
         self.id_counter = 1
+        self.current_user = current_user
         self._create()
 
     def with_analyte_pair(self, input, output):
@@ -59,14 +62,14 @@ class ContextBuilder:
     def _create(self):
         session = None
         clarity_service = None
-        current_user = None
         dilution_service = None
         process_service = ProcessService()
         artifact_service = ArtifactService(self.step_repo)
-        self.context = ExtensionContext(session, artifact_service, self.file_service, current_user,
-                                self.logger, self.step_repo, clarity_service,
-                                dilution_service, process_service, self.validation_service,
-                                test_mode=False, disable_commits=True)
+        self.context = ExtensionContext(
+            session, artifact_service, self.file_service, self.current_user,
+            self.logger, self.step_repo, clarity_service,
+            dilution_service, process_service, self.validation_service,
+            test_mode=False, disable_commits=True)
 
 
 class PairBuilder(object):
@@ -120,6 +123,9 @@ class FakeStepRepo:
 
     def add_shared_result_file(self, f):
         self._shared_files.append((None, f))
+
+    def get_process_type(self):
+        return SimpleNamespace(name="a-step-name")
 
 
 class FakeStepRepoBuilder:
@@ -215,4 +221,7 @@ class FakeArtifactService(object):
 
 class FakeFileService(object):
     def local_shared_file_search_or_create(self, file_name, extension, mode, modify_attached, filename):
+        pass
+
+    def upload_files(self, *args, **kwargs):
         pass

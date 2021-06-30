@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from clarity_ext.utility.testing_parse_scripts.builders import FakeStepRepoBuilder
 from clarity_ext.utility.testing_parse_scripts.builders import PairBuilder
 from clarity_ext.utility.testing_parse_scripts.builders import ContextBuilder
@@ -31,7 +33,8 @@ class ReadResultFileBuilder:
 
     def create(self, extension_type, contents, pairs):
         self.extension_type = extension_type
-        self.context_builder = ContextBuilder(self.step_repo_builder)
+        user = SimpleNamespace(initials='xx')
+        self.context_builder = ContextBuilder(self.step_repo_builder, user)
         self.context_builder.with_mocked_local_shared_file(
             self.shared_file_handle, contents)
         for pair in pairs:
