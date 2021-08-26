@@ -495,11 +495,22 @@ class GeneralExtension(object, metaclass=ABCMeta):
         self.raise_deferred()
 
     def usage_error_defer(self, category, value=None):
-        """Defers raising the error until at the end of the extension run.
+        """
+        Defers raising the warning until at the end of the extension run.
 
         Category can be any string, e.g. 'UDF target vol missing for artifact', in which case the value would
-        be the id or name of the sample."""
+        be the id or name of the sample.
+        """
         self._defer_warning_or_error(True, category, value)
+
+    def usage_warning_defer(self, category, value=None):
+        """
+        Defers raising the warning until at the end of the extension run.
+
+        Category can be any string, e.g. 'UDF target vol missing for artifact', in which case the value would
+        be the id or name of the sample.
+        """
+        self._defer_warning_or_error(False, category, value)
 
     def _defer_warning_or_error(self, is_error, category, value=None):
         bag = self.errors if is_error else self.warnings
