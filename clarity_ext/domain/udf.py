@@ -158,6 +158,10 @@ class UdfMapping(object):
             udf_info.key: udf_info.value for udf_info in self.values
         }
 
+    @property
+    def clarity_udf_names(self):
+        return [k for k in self.to_dict()]
+
     def __getitem__(self, key):
         return self.unwrap(key)
 

@@ -31,6 +31,10 @@ class ReadResultFileBuilder:
     def extension(self):
         return self.extension_type(self.context_builder.context)
 
+    @property
+    def context(self):
+        return self.context_builder.context
+
     def create(self, extension_type, contents, pairs):
         self.extension_type = extension_type
         user = SimpleNamespace(initials='xx')
