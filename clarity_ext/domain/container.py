@@ -209,6 +209,19 @@ class Container(DomainObjectWithUdf):
         for index in range(1, self.size.width + 1):
             yield index
 
+    @property
+    def samples(self):
+        """
+        List an unique set of samples in a container. Note that the same control sample
+        may occur in different pools, are here filtered.
+        :return:
+        """
+        analytes = [well.artifact for well in self.occupied]
+        sample_dict = {s.id: s for a in analytes for s in a.samples}
+        samples = [v for _, v in sample_dict.items()]
+        return samples
+
+
     @staticmethod
     def create_from_container(container):
         """Creates a container with the same dimensions as the other container"""
@@ -217,7 +230,7 @@ class Container(DomainObjectWithUdf):
                          is_source=container.is_source)
 
     @classmethod
-    def create_from_rest_resource(cls, resource, api_artifacts=[], is_source=None):
+    def create_from_rest_resource(cls, resource, api_artifacts=None, is_source=None):
         """
         Creates a container based on a resource from the REST API.
         """
@@ -230,8 +243,11 @@ class Container(DomainObjectWithUdf):
         ret.name = resource.name
         ret.size = size
 
+        if api_artifacts is None:
+            api_artifacts = []
         for artifact in api_artifacts:
-            ret.set_well_update_artifact(artifact.location[1], artifact)
+            well_position = artifact.location[1]
+            ret.set_well_update_artifact(well_position, artifact)
         ret.api_resource = resource
         return ret
 

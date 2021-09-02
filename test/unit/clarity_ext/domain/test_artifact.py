@@ -1,4 +1,9 @@
 import unittest
+
+from clarity_ext import ClaritySession
+from clarity_ext.inversion_of_control.ioc import ioc
+from clarity_ext.service.application import ApplicationService
+from genologics.lims import Lims
 from test.unit.clarity_ext.helpers import fake_analyte, fake_result_file
 from test.unit.clarity_ext.helpers import fake_shared_result_file
 from test.unit.clarity_ext.helpers import fake_container
@@ -13,6 +18,9 @@ from clarity_ext.mappers.clarity_mapper import ClarityMapper
 
 
 class TestArtifact(unittest.TestCase):
+    def setUp(self):
+        ioc.set_application(ApplicationService(None))
+
     def test_two_identical_artifacts_equal(self):
         """A copy of an artifact should be equal to another"""
         artifacts = [ResultFile(api_resource=None, is_input=False),
@@ -77,10 +85,11 @@ class TestArtifact(unittest.TestCase):
         container_repo = MagicMock()
         container = fake_container("cont1")
         container_repo.get_container.return_value = container
+        ioc.app.container_repository = container_repo
 
         clarity_mapper = ClarityMapper()
         analyte = clarity_mapper.analyte_create_object(
-            api_resource, is_input=True, container_repo=container_repo, process_type=MagicMock())
+            api_resource, is_input=True, process_type=MagicMock())
 
         expected_analyte = fake_analyte(container_id="cont1", artifact_id="art1", sample_ids=["sample1"],
                                         analyte_name="sample1", well_key="B:2", is_input=True,
@@ -111,10 +120,11 @@ class TestArtifact(unittest.TestCase):
             resouce_id="art1", sample_name="sample1", well_position="B:2")
         api_resource.udf = {}
         container_repo = mock_container_repo(container_id="cont1")
+        ioc.app.container_repository = container_repo
 
         clarity_mapper = ClarityMapper()
         result_file = clarity_mapper.result_file_create_object(
-            api_resource, is_input=False, container_repo=container_repo,
+            api_resource, is_input=False,
             process_type=self._create_process_type_mock(field_definitions=[]))
 
         expected_result_file = fake_result_file(
@@ -131,12 +141,11 @@ class TestArtifact(unittest.TestCase):
         api_resource = mock_artifact_resource(
             resouce_id="art1", sample_name="sample1")
         api_resource.udf = udfs
-        container_repo = mock_container_repo(container_id=None)
 
         clarity_mapper = ClarityMapper()
         result_file = clarity_mapper.result_file_create_object(
             api_resource, is_input=False,
-            container_repo=container_repo, process_type=self._create_process_type_mock(field_definitions=["UDF1"]))
+            process_type=self._create_process_type_mock(field_definitions=["UDF1"]))
 
         expected_result_file = fake_result_file(
             artifact_id="art1", container_id=None, name="sample1", well_key="B:2",

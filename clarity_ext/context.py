@@ -1,4 +1,7 @@
 from datetime import datetime
+
+from clarity_ext.inversion_of_control.ioc import ioc
+from clarity_ext.service.application import ApplicationService
 from clarity_ext.service.dilution.service import DilutionService
 from clarity_ext import UnitConversion
 from clarity_ext.repository import ClarityRepository, FileRepository
@@ -74,6 +77,7 @@ class ExtensionContext(object):
         use the constructor for custom use and unit tests.
         """
         session = ClaritySession.create(step_id)
+        ioc.set_application(ApplicationService(session))
         clarity_mapper = ClarityMapper()
         step_repo = StepRepository(session, clarity_mapper)
         artifact_service = ArtifactService(step_repo)

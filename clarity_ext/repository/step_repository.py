@@ -116,7 +116,6 @@ class StepRepository(object):
                     input_resource,
                     output_resource,
                     output_gen_type,
-                    container_repo,
                     process_type)
             if output_domain_obj.id in outputs_by_id:
                 output_domain_obj = outputs_by_id[output_domain_obj.id]
@@ -124,12 +123,9 @@ class StepRepository(object):
             outputs_by_id[output_domain_obj.id] = output_domain_obj
         return ret
 
-    def _wrap_input_output(self,
-            input_resource,
-            output_resource,
-            output_generation_type,
-            container_repo,
-            process_type):
+    def _wrap_input_output(
+            self, input_resource, output_resource,
+            output_generation_type,process_type):
         # Create a map of all containers, so we can fill in it while building
         # domain objects.
 
@@ -138,14 +134,12 @@ class StepRepository(object):
 
         input = self._wrap_artifact(
             input_resource,
-            container_repo,
             gen_type="Input",
             is_input=True,
             process_type=process_type)
 
         output = self._wrap_artifact(
             output_resource,
-            container_repo,
             gen_type=output_generation_type,
             is_input=False,
             process_type=process_type)
@@ -169,7 +163,7 @@ class StepRepository(object):
 
         return input, output
 
-    def _wrap_artifact(self, artifact, container_repo, gen_type, is_input, process_type):
+    def _wrap_artifact(self, artifact, gen_type, is_input, process_type):
         """
         Wraps an artifact in a domain object, if one exists. The domain objects provide logic
         convenient methods for working with the domain object in extensions.
@@ -177,10 +171,10 @@ class StepRepository(object):
 
         if artifact.type == "Analyte":
             wrapped = self.clarity_mapper.analyte_create_object(
-                artifact, is_input, container_repo, process_type)
+                artifact, is_input, process_type)
         elif artifact.type == "ResultFile" and gen_type == "PerInput":
             wrapped = self.clarity_mapper.result_file_create_object(
-                artifact, is_input, container_repo, process_type)
+                artifact, is_input, process_type)
         elif artifact.type == "ResultFile" and gen_type == "PerAllInputs":
             wrapped = SharedResultFile.create_from_rest_resource(
                 artifact, process_type)

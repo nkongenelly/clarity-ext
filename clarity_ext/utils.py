@@ -5,6 +5,8 @@ import hashlib
 import logging
 from contextlib import contextmanager
 import types
+import xml.etree.ElementTree as ET
+import xml.dom.minidom
 
 
 # http://stackoverflow.com/a/3013910/282024
@@ -131,6 +133,18 @@ def get_jinja_template_from_package(package, name):
     for candidate_file in os.listdir(templates_dir):
         if candidate_file == name:
             return os.path.join(templates_dir, candidate_file)
+
+
+def pretty_print(api_resource):
+    """
+    Used for pretty print genologics api resources when debugging.
+    Prints indented xml.
+    """
+    xml_string = ET.tostring(api_resource.root, encoding='unicode')
+    dom = xml.dom.minidom.parseString(xml_string)
+    pretty_xml_as_string = dom.toprettyxml()
+    print(pretty_xml_as_string)
+
 
 class UnexpectedLengthError(ValueError):
     pass

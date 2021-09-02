@@ -1,8 +1,11 @@
 """
 Various helpers for mocking data quickly, in either unit tests or notebooks.
 """
+from clarity_ext import ClaritySession
 from clarity_ext.domain import *
+from clarity_ext.service.application import ApplicationService
 from clarity_ext.service.dilution.service import *
+from genologics.lims import Lims
 from mock import MagicMock
 from clarity_ext.context import ExtensionContext
 
@@ -184,6 +187,8 @@ class TestExtensionContext(object):
         # TODO: only mocking this one method of the validation_service for now (quick fix)
         self.context.validation_service.handle_single_validation = MagicMock()
         self.context.logger = MagicMock()
+        application = ApplicationService(session)
+        ioc.set_application(application)
 
         self._shared_files = list()
         self._analytes = list()
@@ -246,7 +251,8 @@ class StepScenario(object):
         project = Project("IntegrationTest")
         if not samples:
             samples = [Sample(name, name, project)]
-        ret = analyte_type(api_resource=None, is_input=is_input, id=analyte_id, name=name, samples=samples)
+        ret = analyte_type(api_resource=None, is_input=is_input, id=analyte_id, name=name)
+        ret._samples = samples
         self.analytes.append(ret)
         return ret
 
@@ -305,14 +311,15 @@ class PoolSamplesScenario(StepScenario):
         pool = self.create_analyte(False, name, analyte_id)
         if last_container:
             last_container.append(pool)
-        pool.samples = list()  # Emptying it, as the helper creates them by default
+        pool._samples = list()  # Emptying it, as the helper creates them by default
+        pool._sample_resources = list()
         self.pools.append(pool)
         return self
 
     def add_to_pool(self, pool_ref=-1, analyte_ref=-1, input_container_ref=-1):
         pool = self.pools[pool_ref]
         input_analyte = self.input_containers[input_container_ref].occupied[analyte_ref].artifact
-        pool.samples.append(input_analyte.sample())
+        pool._samples.append(input_analyte.sample())
         pair = pool.pair_as_output(input_analyte)
         self.pairs.append(pair)
         self.context_wrapper.add_analyte_pair(pair.input_artifact, pair.output_artifact)

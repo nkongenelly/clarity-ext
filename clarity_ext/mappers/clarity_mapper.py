@@ -4,6 +4,7 @@ from clarity_ext.domain import ResultFile
 from clarity_ext.domain import Analyte, Project
 from clarity_ext import utils
 from clarity_ext.domain.container import ContainerPosition
+from clarity_ext.inversion_of_control.ioc import ioc
 
 
 class ClarityMapper(object):
@@ -47,6 +48,8 @@ class ClarityMapper(object):
         return self.map[domain_object]
 
     def sample_create_object(self, resource):
+        # from clarity_ext.utils import pretty_print
+        # pretty_print(resource)
         project = Project(resource.project.name) if resource.project else None
         udf_map = UdfMapping(resource.udf)
         sample = Sample(resource.id,
@@ -80,7 +83,7 @@ class ClarityMapper(object):
                 resource.udf[udf_info.key] = udf_info.value
             return resource
 
-    def analyte_create_object(self, resource, is_input, container_repo, process_type):
+    def analyte_create_object(self, resource, is_input, process_type):
         """
         Creates an Analyte from the rest resource. By default, the container
         is created from the related container resource, except if one
@@ -107,9 +110,7 @@ class ClarityMapper(object):
             udfs = resource.udf
 
         udf_map = UdfMapping(udfs)
-
-        well = self.well_create_object(resource, container_repo, is_input)
-
+        well = self.well_create_object(resource, is_input)
         is_control = self._is_control(resource)
         # TODO: A better way to decide if analyte is output of a previous step?
         is_from_original = (resource.id.find("2-") != 0)
@@ -136,10 +137,10 @@ class ClarityMapper(object):
     def analyte_create_resource(self, analyte):
         pass
 
-    def well_create_object(self, resource, container_repo, is_source):
+    def well_create_object(self, resource, is_source):
         # TODO: Batch call
         try:
-            container = container_repo.get_container(
+            container = ioc.app.container_repository.get_container(
                 resource.location[0], is_source)
         except AttributeError:
             container = None
@@ -157,7 +158,7 @@ class ClarityMapper(object):
     def well_create_resource(self, well):
         pass
 
-    def result_file_create_object(self, resource, is_input, container_repo, process_type):
+    def result_file_create_object(self, resource, is_input, process_type):
         """
         Creates a `ResultFile` from the REST resource object.
         The container is fetched from the container_repo.
@@ -170,7 +171,7 @@ class ClarityMapper(object):
         udfs = UdfMapping.expand_udfs(resource, process_output)
         udf_map = UdfMapping(udfs)
 
-        well = self.well_create_object(resource, container_repo, is_input)
+        well = self.well_create_object(resource, is_input)
         ret = ResultFile(api_resource=resource,
                          is_input=is_input,
                          id=resource.id,

@@ -162,6 +162,12 @@ class UdfMapping(object):
     def clarity_udf_names(self):
         return [k for k in self.to_dict()]
 
+    def to_pythonic_dict(self):
+        # Returns a dict of the key/values where the key is pythonic version of the Clarity udf name.
+        # e.g. "udf_application", instead of "Application"
+        keys = [key for key in self.raw_map if key.startswith('udf_')]
+        return {key: self[key].value for key in keys}
+
     def __getitem__(self, key):
         return self.unwrap(key)
 

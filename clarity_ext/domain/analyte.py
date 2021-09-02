@@ -1,7 +1,6 @@
-from clarity_ext.domain.aliquot import Aliquot, Sample
+from clarity_ext.domain.aliquot import Aliquot
 from clarity_ext.domain.artifact import Artifact
 from clarity_ext import utils
-from clarity_ext.domain.udf import UdfMapping
 
 
 class Analyte(Aliquot):
