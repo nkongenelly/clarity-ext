@@ -35,17 +35,19 @@ class ExtensionBuilderBase:
     def context(self):
         return self.context_builder.context
 
-    def create(self, extension_type, contents, pairs):
+    def create(self, extension_type, pairs, file_contents=None):
         self.extension_type = extension_type
         user = SimpleNamespace(initials='xx')
         self.context_builder = ContextBuilder(self.step_repo_builder, user)
         self.context_builder.with_mocked_local_shared_file(
-            self.shared_file_handle, contents)
+            self.shared_file_handle, file_contents or "")
         for pair in pairs:
             self.context_builder.with_analyte_pair(pair.input_artifact, pair.output_artifact)
 
-    def with_analyte_udf(self, lims_udf_name, udf_value):
-        self.pair_builder.with_output_udf(lims_udf_name, udf_value)
+    def with_configured_analyte_udf(self, lims_udf_name, default_udf_value):
+        # This simulates that all analytes in a step has a pre-configured udf
+        # In many cases, this udf has not been populated at start of script execution
+        self.pair_builder.with_output_udf(lims_udf_name, default_udf_value)
 
     def with_output_type(self, output_type):
         self.pair_builder.target_type = output_type
