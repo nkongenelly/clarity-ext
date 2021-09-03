@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from clarity_ext.domain import Sample
 from mock import MagicMock
 from io import StringIO
 from io import BytesIO
@@ -71,14 +72,16 @@ class ContextBuilder:
 
 
 class PairBuilder(object):
-    def __init__(self):
-        self.artifact_repo = FakeArtifactFactory()
-        self.output_udf_dict = dict()
-        self.target_id = None
-        self.target_type = None
+    def __init__(self, base_builder=None):
+        self.artifact_repo = \
+            base_builder.artifact_repo if base_builder else FakeArtifactFactory()
+        self.output_udf_dict = base_builder.output_udf_dict.copy() if base_builder else dict()
+        self.target_id = base_builder.target_id if base_builder else None
+        self.target_type = base_builder.target_type if base_builder else None
+        self.qc_flag = base_builder.qc_flag if base_builder else Aliquot.QC_FLAG_UNKNOWN
+        self.name = base_builder.name if base_builder else None
+        self.samples = base_builder.samples.copy() if base_builder else list()
         self.pair = None
-        self.qc_flag = Aliquot.QC_FLAG_UNKNOWN
-        self.name = None
 
     def create(self):
         pair = self.artifact_repo.create_pair(
@@ -88,6 +91,9 @@ class PairBuilder(object):
         pair.output_artifact.qc_flag = self.qc_flag
         pair.output_artifact.name = self.name
         pair.input_artifact.name = self.name
+        if len(self.samples) > 0:
+            pair.input_artifact._samples = self.samples
+            pair.output_artifact._samples = self.samples
         self.pair = pair
 
     def with_target_id(self, target_id):
@@ -101,6 +107,30 @@ class PairBuilder(object):
 
     def with_target_type(self, type):
         self.target_type = type
+
+    def add_sample(self, sample):
+        self.samples.append(sample)
+
+
+class SampleBuilder:
+    def __init__(self):
+        self.udf_dict = dict()
+        self.name = None
+        self.sample_id = None
+
+    def with_udf(self, udf_name, value):
+        self.udf_dict[udf_name] = value
+
+    def with_id(self, id):
+        self.sample_id = id
+
+    def with_name(self, name):
+        self.name = name
+
+    def create(self):
+        mapping = UdfMapping(self.udf_dict)
+        s = Sample(self.sample_id, self.name, None, udf_map=mapping)
+        return s
 
 
 class FakeStepRepo:
