@@ -63,6 +63,7 @@ class ExtensionBuilderBase:
         # This simulates that all analytes in a step has a pre-configured udf
         # In many cases, this udf has not been populated at start of script execution
         self.default_pair_builder.with_output_udf(lims_udf_name, default_udf_value)
+        self.default_pair_builder.with_input_udf(lims_udf_name, default_udf_value)
 
     def with_output_type(self, output_type):
         self.default_pair_builder.target_type = output_type

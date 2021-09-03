@@ -76,6 +76,7 @@ class PairBuilder(object):
         self.artifact_repo = \
             base_builder.artifact_repo if base_builder else FakeArtifactFactory()
         self.output_udf_dict = base_builder.output_udf_dict.copy() if base_builder else dict()
+        self.input_udf_dict = base_builder.input_udf_dict.copy() if base_builder else dict()
         self.target_id = base_builder.target_id if base_builder else None
         self.target_type = base_builder.target_type if base_builder else None
         self.qc_flag = base_builder.qc_flag if base_builder else Aliquot.QC_FLAG_UNKNOWN
@@ -91,6 +92,7 @@ class PairBuilder(object):
         pair.output_artifact.qc_flag = self.qc_flag
         pair.output_artifact.name = self.name
         pair.input_artifact.name = self.name
+        pair.input_artifact.udf_map = UdfMapping(self.input_udf_dict)
         if len(self.samples) > 0:
             pair.input_artifact._samples = self.samples
             pair.output_artifact._samples = self.samples
@@ -104,6 +106,9 @@ class PairBuilder(object):
 
     def with_output_udf(self, lims_udf_name, value):
         self.output_udf_dict[lims_udf_name] = value
+
+    def with_input_udf(self, lims_udf_name, value):
+        self.input_udf_dict[lims_udf_name] = value
 
     def with_target_type(self, type):
         self.target_type = type
