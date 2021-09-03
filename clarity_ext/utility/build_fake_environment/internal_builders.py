@@ -3,10 +3,8 @@ from types import SimpleNamespace
 from mock import MagicMock
 from io import StringIO
 from io import BytesIO
-from mock import create_autospec
 from clarity_ext.service.file_service import Csv
 from clarity_ext.service.file_service import FileService
-from clarity_ext.service.file_service import OSService
 from clarity_ext.service.process_service import ProcessService
 from clarity_ext.service.validation_service import ValidationService
 from clarity_ext.service.step_logger_service import StepLoggerService
@@ -17,7 +15,7 @@ from clarity_ext.domain.user import User
 from clarity_ext.domain.udf import UdfMapping
 from clarity_ext.domain.aliquot import Aliquot
 from clarity_ext.domain.shared_result_file import SharedResultFile
-from clarity_ext.utility.testing_parse_scripts.fake_artifact_factory import FakeArtifactFactory
+from clarity_ext.utility.build_fake_environment.fake_artifact_factory import FakeArtifactFactory
 
 
 class ContextBuilder:

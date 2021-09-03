@@ -1,11 +1,11 @@
 from types import SimpleNamespace
 
-from clarity_ext.utility.testing_parse_scripts.builders import FakeStepRepoBuilder
-from clarity_ext.utility.testing_parse_scripts.builders import PairBuilder
-from clarity_ext.utility.testing_parse_scripts.builders import ContextBuilder
+from clarity_ext.utility.build_fake_environment.internal_builders import FakeStepRepoBuilder
+from clarity_ext.utility.build_fake_environment.internal_builders import PairBuilder
+from clarity_ext.utility.build_fake_environment.internal_builders import ContextBuilder
 
 
-class ReadResultFileBuilder:
+class ExtensionBuilderBase:
     """
     1. call with_analyte_udf, with_output_type, with_mocked_local_shared_file
        (udfs that are to be set from result file)
