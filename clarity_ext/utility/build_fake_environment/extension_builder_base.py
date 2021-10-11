@@ -14,7 +14,9 @@ class ExtensionBuilderBase:
     4. call create
     """
     def __init__(self):
-        self.shared_file_handle = None
+        self.shared_file_handle_with_contents = None
+        self.warning_step_log = False
+        self.error_step_log = False
         self.context_builder = None
         self.step_repo_builder = FakeStepRepoBuilder()
         self.default_pair_builder = PairBuilder()
@@ -54,8 +56,13 @@ class ExtensionBuilderBase:
         self.extension_type = extension_type
         user = SimpleNamespace(initials='xx')
         self.context_builder = ContextBuilder(self.step_repo_builder, user)
-        self.context_builder.with_mocked_local_shared_file(
-            self.shared_file_handle, file_contents or "")
+        if self.shared_file_handle_with_contents:
+            self.context_builder.with_mocked_local_shared_file(
+                self.shared_file_handle_with_contents, file_contents or "")
+        if self.warning_step_log:
+            self.context_builder.with_shared_result_file('Step log', 'Warnings')
+        if self.error_step_log:
+            self.context_builder.with_shared_result_file('Step log', 'Errors')
         for pair in pairs:
             self.context_builder.with_analyte_pair(pair.input_artifact, pair.output_artifact)
 
@@ -72,4 +79,10 @@ class ExtensionBuilderBase:
         self.step_repo_builder.with_process_udf(lims_udf_name, udf_value)
 
     def with_mocked_local_shared_file(self, filehandle):
-        self.shared_file_handle = filehandle
+        self.shared_file_handle_with_contents = filehandle
+
+    def with_warning_step_log(self):
+        self.warning_step_log = True
+
+    def with_error_step_log(self):
+        self.error_step_log = True
