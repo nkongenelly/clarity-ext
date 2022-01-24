@@ -9,6 +9,7 @@ class Process(DomainObjectWithUdf):
         self.technician = technician
         self.ui_link = ui_link
         self.instrument = instrument
+        self.active_udfs = None
 
     @staticmethod
     def create_from_rest_resource(resource):
@@ -25,6 +26,10 @@ class Process(DomainObjectWithUdf):
                       ui_link, instrument)
         return ret
 
+    def get_active_udfs(self):
+        if self.active_udfs is None:
+            self.active_udfs = self.api_resource.step.configuration.step_fields
+        return self.active_udfs
 
 class ProcessType(object):
     # TODO: The process type defined in pip/genologics doesn't have all the entries defined
