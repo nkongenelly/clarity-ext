@@ -165,8 +165,10 @@ class FakeStepRepoBuilder:
     def __init__(self):
         self.fake_step_repo = None
         self.process_udf_dict = dict()
+        self.active_udfs = list()
 
     def with_process_udf(self, lims_udf_name, udf_value):
+        self.active_udfs.append({'name': lims_udf_name})
         self.process_udf_dict[lims_udf_name] = udf_value
         if self.fake_step_repo is not None and self.fake_step_repo.process is not None:
             udf_map = UdfMapping(self.process_udf_dict)
@@ -179,6 +181,7 @@ class FakeStepRepoBuilder:
                                               self.fake_step_repo.user,
                                               udf_map,
                                               "http://not-avail")
+        self.fake_step_repo.process.active_udfs = self.active_udfs
 
 
 class LocalSharedFilePatcher:
