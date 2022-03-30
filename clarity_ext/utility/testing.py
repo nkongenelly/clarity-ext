@@ -187,7 +187,7 @@ class TestExtensionContext(object):
         # TODO: only mocking this one method of the validation_service for now (quick fix)
         self.context.validation_service.handle_single_validation = MagicMock()
         self.context.logger = MagicMock()
-        application = ApplicationService(session)
+        application = ApplicationService(session, None)
         ioc.set_application(application)
 
         self._shared_files = list()

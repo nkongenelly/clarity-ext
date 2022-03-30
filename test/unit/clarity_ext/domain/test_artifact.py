@@ -19,7 +19,7 @@ from clarity_ext.mappers.clarity_mapper import ClarityMapper
 
 class TestArtifact(unittest.TestCase):
     def setUp(self):
-        ioc.set_application(ApplicationService(None))
+        ioc.set_application(ApplicationService(None, None))
 
     def test_two_identical_artifacts_equal(self):
         """A copy of an artifact should be equal to another"""

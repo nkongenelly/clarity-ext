@@ -9,8 +9,9 @@ class SampleRepository(object):
     Upon first request of a sample (typically within script execution), fetch
     them all in one swoop, by get_batch()
     """
-    def __init__(self, session):
+    def __init__(self, session, clarity_mapper):
         self.session = session
+        self.clarity_mapper = clarity_mapper
         self.candidates = list()  # not-fetched genologics sample resources
         self.samples = dict()
         self._is_fetched = False
@@ -31,8 +32,7 @@ class SampleRepository(object):
 
     def _fetch_candidates(self):
         fetched_resources = self.session.api.get_batch(self.candidates)
-        mapper = ClarityMapper()
         for resource in fetched_resources:
-            sample = mapper.sample_create_object(resource)
+            sample = self.clarity_mapper.sample_create_object(resource)
             self.samples[resource.uri] = sample
 

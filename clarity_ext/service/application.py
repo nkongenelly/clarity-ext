@@ -7,6 +7,6 @@ class ApplicationService(object):
     Sets up instances of all required repositories in the system.
     """
 
-    def __init__(self, session):
-        self.sample_repository = SampleRepository(session)
+    def __init__(self, session, clarity_mapper):
+        self.sample_repository = SampleRepository(session, clarity_mapper)
         self.container_repository = ContainerRepository()
