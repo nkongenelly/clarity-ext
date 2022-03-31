@@ -77,8 +77,8 @@ class ExtensionContext(object):
         use the constructor for custom use and unit tests.
         """
         session = ClaritySession.create(step_id)
-        ioc.set_application(ApplicationService(session))
         clarity_mapper = ClarityMapper()
+        ioc.set_application(ApplicationService(session, clarity_mapper))
         step_repo = StepRepository(session, clarity_mapper)
         artifact_service = ArtifactService(step_repo)
         current_user = step_repo.current_user()

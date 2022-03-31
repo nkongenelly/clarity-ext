@@ -10,7 +10,7 @@ class TestSampleRepository(unittest.TestCase):
     def test_fetch_sample_not_initialized__assert_exception_thrown(self):
         lims = Lims('', '', '')
         session = FakeSession(lims)
-        sample_repo = SampleRepository(session)
+        sample_repo = SampleRepository(session, None)
         sample_resource = Sample(lims, uri='someting')
         self.assertRaises(
             AssertionError, lambda: sample_repo.get_samples([sample_resource])
@@ -20,4 +20,4 @@ class TestSampleRepository(unittest.TestCase):
 class FakeSession(object):
     def __init__(self, lims):
         self.api = lims
-        ioc.set_application(ApplicationService(self))
+        ioc.set_application(ApplicationService(self, None))
