@@ -5,7 +5,7 @@ from setuptools import find_packages, setup
 from clarity_ext import VERSION
 
 dependencies = ['click', 'genologics', 'requests-cache', 'pyyaml', 'nose', 'PyPDF2',
-                'lxml', 'coverage', 'pep8radius', 'mock', 'jinja2', 'python-levenshtein',
+                'lxml', 'coverage', 'pep8radius', 'mock', 'jinja2',
                 'fuzzywuzzy', 'pandas', 'xlrd', 'bs4']
 
 setup(
