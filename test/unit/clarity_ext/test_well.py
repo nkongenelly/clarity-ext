@@ -17,7 +17,6 @@ class WellTest(unittest.TestCase):
         assert_well("A:5", 33)
         assert_well("E:12", 93)
         assert_well("B:7", 50)
-        assert False
 
 if __name__ == "__main__":
     unittest.main()
