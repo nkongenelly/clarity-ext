@@ -58,9 +58,6 @@ class Aliquot(Artifact):
 
     @property
     def is_pool(self):
-        if self._samples is None:
-            # TODO: Happens only in a test, fix that...
-            return False
         return len(self._sample_resources) > 1
 
 
