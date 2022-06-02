@@ -79,6 +79,7 @@ class PairBuilder(object):
         self.output_udf_dict = base_builder.output_udf_dict.copy() if base_builder else dict()
         self.input_udf_dict = base_builder.input_udf_dict.copy() if base_builder else dict()
         self.target_id = base_builder.target_id if base_builder else None
+        self.source_id = base_builder.source_id if base_builder else None
         self.target_type = base_builder.target_type if base_builder else None
         self.qc_flag = base_builder.qc_flag if base_builder else Aliquot.QC_FLAG_UNKNOWN
         self.name = base_builder.name if base_builder else None
@@ -111,8 +112,8 @@ class PairBuilder(object):
     def with_target_id(self, target_id):
         self.target_id = target_id
 
-    def with_source_id(self, target_id):
-        self.source_id = target_id
+    def with_source_id(self, source_id):
+        self.source_id = source_id
 
     def with_name(self, name):
         self.name = name
