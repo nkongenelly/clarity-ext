@@ -35,10 +35,11 @@ class ExtensionBuilderBase:
         artifact_pair_builder.create()
         return artifact_pair_builder.pair
 
-    def create_sample(self, id, name=None, udf_map=None):
+    def create_sample(self, id, name=None, udf_map=None, project=None):
         sample_builder = SampleBuilder()
         sample_builder.with_id(id)
         sample_builder.with_name(name)
+        sample_builder.with_project(project)
         if udf_map:
             for udf in udf_map:
                 sample_builder.with_udf(udf, udf_map[udf])

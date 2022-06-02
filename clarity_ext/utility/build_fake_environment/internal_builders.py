@@ -15,6 +15,7 @@ from clarity_ext.domain.process import Process
 from clarity_ext.domain.user import User
 from clarity_ext.domain.udf import UdfMapping
 from clarity_ext.domain.aliquot import Aliquot
+from clarity_ext.domain.container import Container
 from clarity_ext.domain.shared_result_file import SharedResultFile
 from clarity_ext.utility.build_fake_environment.fake_artifact_factory import FakeArtifactFactory
 
@@ -78,21 +79,31 @@ class PairBuilder(object):
         self.output_udf_dict = base_builder.output_udf_dict.copy() if base_builder else dict()
         self.input_udf_dict = base_builder.input_udf_dict.copy() if base_builder else dict()
         self.target_id = base_builder.target_id if base_builder else None
+        self.source_id = base_builder.source_id if base_builder else None
         self.target_type = base_builder.target_type if base_builder else None
         self.qc_flag = base_builder.qc_flag if base_builder else Aliquot.QC_FLAG_UNKNOWN
         self.name = base_builder.name if base_builder else None
         self.samples = base_builder.samples.copy() if base_builder else list()
+        self.input_container = base_builder.input_container if base_builder else None
+        self.output_container = base_builder.output_container if base_builder else None
         self.pair = None
 
     def create(self):
         pair = self.artifact_repo.create_pair(
-            pos_from=None, pos_to=None, source_id=None, target_id=self.target_id,
+            pos_from=None, pos_to=None, source_id=self.source_id, target_id=self.target_id,
             target_type=self.target_type)
         pair.output_artifact.udf_map = UdfMapping(self.output_udf_dict)
         pair.output_artifact.qc_flag = self.qc_flag
         pair.output_artifact.name = self.name
         pair.input_artifact.name = self.name
         pair.input_artifact.udf_map = UdfMapping(self.input_udf_dict)
+        if self.input_container is not None:
+            # get well position from original initiation in fake artifact repo
+            well_pos = pair.input_artifact.well.position
+            self.input_container.set_well_update_artifact(artifact=pair.input_artifact, well_pos=well_pos)
+        if self.output_container is not None:
+            well_pos = pair.output_artifact.well.position
+            self.output_container.set_well_update_artifact(artifact=pair.output_artifact, well_pos=well_pos)
         if len(self.samples) > 0:
             pair.input_artifact._samples = self.samples
             pair.output_artifact._samples = self.samples
@@ -100,6 +111,9 @@ class PairBuilder(object):
 
     def with_target_id(self, target_id):
         self.target_id = target_id
+
+    def with_source_id(self, source_id):
+        self.source_id = source_id
 
     def with_name(self, name):
         self.name = name
@@ -113,6 +127,12 @@ class PairBuilder(object):
     def with_target_type(self, type):
         self.target_type = type
 
+    def with_input_container(self, container):
+        self.input_container = container
+
+    def with_output_container(self, container):
+        self.output_container = container
+
     def add_sample(self, sample):
         self.samples.append(sample)
 
@@ -122,6 +142,7 @@ class SampleBuilder:
         self.udf_dict = dict()
         self.name = None
         self.sample_id = None
+        self.project = None
 
     def with_udf(self, udf_name, value):
         self.udf_dict[udf_name] = value
@@ -132,10 +153,34 @@ class SampleBuilder:
     def with_name(self, name):
         self.name = name
 
+    def with_project(self, project):
+        self.project = project
+
     def create(self):
         mapping = UdfMapping(self.udf_dict)
-        s = Sample(self.sample_id, self.name, None, udf_map=mapping)
+        s = Sample(self.sample_id, self.name, udf_map=mapping, project=self.project)
         return s
+
+class ContainerBuilder:
+    def __init__(self):
+        self.udf_dict = dict()
+        self.name = None
+        self.id = None
+
+    def with_udf(self, udf_name, value):
+        self.udf_dict[udf_name] = value
+
+    def with_id(self, id):
+        self.id = id
+
+    def with_name(self, name):
+        self.name = name
+
+    def create(self):
+        mapping = UdfMapping(self.udf_dict)
+        c = Container(container_type=Container.CONTAINER_TYPE_96_WELLS_PLATE, container_id=self.id, name=self.name, udf_map=mapping)
+        return c
+
 
 
 class FakeStepRepo:
