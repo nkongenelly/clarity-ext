@@ -58,6 +58,16 @@ class FileService:
         self.os_service.makedirs(self.temp_path)
         self.os_service.makedirs(self.downloaded_path)
 
+    def parse_xlsx(self, f):
+        from openpyxl import load_workbook
+        import pandas as pd
+        with open(f.name, "rb") as wbook:
+            writer = pd.ExcelWriter(wbook, engine='openpyxl')
+            workbook = load_workbook(wbook, data_only=True)
+
+            writer.book = workbook
+            return writer.book
+
     def parse_xml(self, f):
         """
         Parses the file like object as XML and returns an object that provides simple access to

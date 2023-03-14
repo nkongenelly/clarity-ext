@@ -221,7 +221,8 @@ class ExtensionContext(object):
         self.validation_service.handle_validation(
             self.validation_results, tailored_error_message=msg)
 
-    def local_shared_file(self, clarity_file_handle, mode="r", is_xml=False, is_csv=False, file_name_contains=None):
+    def local_shared_file(self, clarity_file_handle, mode="r", is_xml=False, is_csv=False, file_name_contains=None,
+                          is_xlsx=False):
         """
         Downloads the file from the current step. The returned file is generally a regular
         file-like object, but can be casted to an xml object or csv by passing in is_xml or is_csv.
@@ -246,6 +247,9 @@ class ExtensionContext(object):
         elif is_csv:
             check_file_extension('.csv')
             return self.file_service.parse_csv(f)
+        elif is_xlsx:
+            check_file_extension('.xlsx')
+            return self.file_service.parse_xlsx(f)
         else:
             return f
 
