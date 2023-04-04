@@ -7,6 +7,7 @@ from zipfile import ZipFile
 from lxml import objectify
 from clarity_ext import utils
 import requests
+from openpyxl import load_workbook
 
 
 class FileService:
@@ -57,6 +58,11 @@ class FileService:
         self.os_service.makedirs(self.uploaded_path)
         self.os_service.makedirs(self.temp_path)
         self.os_service.makedirs(self.downloaded_path)
+
+    def parse_xlsx(self, f):
+        with open(f.name, "rb") as wbook:
+            workbook = load_workbook(wbook, data_only=True)
+            return workbook
 
     def parse_xml(self, f):
         """
