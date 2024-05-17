@@ -86,8 +86,9 @@ class StepRepository(object):
         artifact_keys = set()
 
         for input_info, output_info in input_output_maps:
-            artifact_keys.add(fetch_input(input_info))
-            artifact_keys.add(fetch_output(output_info))
+            if output_info:
+                artifact_keys.add(fetch_input(input_info))
+                artifact_keys.add(fetch_output(output_info))
 
         artifacts = self.session.api.get_batch(artifact_keys)
 
@@ -108,19 +109,20 @@ class StepRepository(object):
         container_repo = ContainerRepository()
 
         for input_info, output_info in input_output_maps:
-            input_resource = artifacts_by_uri[fetch_input(input_info).uri]
-            output_resource = artifacts_by_uri[fetch_output(output_info).uri]
-            output_gen_type = output_info["output-generation-type"]
+            if output_info:
+                input_resource = artifacts_by_uri[fetch_input(input_info).uri]
+                output_resource = artifacts_by_uri[fetch_output(output_info).uri]
+                output_gen_type = output_info["output-generation-type"]
 
-            input_domain_obj, output_domain_obj = self._wrap_input_output(
-                    input_resource,
-                    output_resource,
-                    output_gen_type,
-                    process_type)
-            if output_domain_obj.id in outputs_by_id:
-                output_domain_obj = outputs_by_id[output_domain_obj.id]
-            ret.append((input_domain_obj, output_domain_obj))
-            outputs_by_id[output_domain_obj.id] = output_domain_obj
+                input_domain_obj, output_domain_obj = self._wrap_input_output(
+                        input_resource,
+                        output_resource,
+                        output_gen_type,
+                        process_type)
+                if output_domain_obj.id in outputs_by_id:
+                    output_domain_obj = outputs_by_id[output_domain_obj.id]
+                ret.append((input_domain_obj, output_domain_obj))
+                outputs_by_id[output_domain_obj.id] = output_domain_obj
         return ret
 
     def _wrap_input_output(
